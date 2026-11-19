@@ -1,0 +1,8 @@
+perturbation,robust_teacher,dp_zoom,dp_robust_dagger
+No perturbation,100,76,74
+Missed grasp,98,51,54
+Cube dropped,90,12,38
+Cube knocked,84,49,56
+Pushed in hand (held-out),100,81,75
+Arm shoved (held-out),100,76,75
+Late knock (held-out),90,37,43

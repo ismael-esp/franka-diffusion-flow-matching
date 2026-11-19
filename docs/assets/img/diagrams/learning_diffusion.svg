@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 745 500" width="745" height="500" role="img" aria-label="Diffusion learning: corrupted demo chunks, the sampling path and the training loop">
+<text x="0.0" y="16.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#12202b" text-anchor="start">Training: corrupt a real demo chunk (dashed: a drawer demo's gripper command), then undo it</text>
+<rect x="0" y="36" width="137" height="122" fill="#ffffff" stroke="#d3dbe2" stroke-width="1"/>
+<line x1="0" y1="97.0" x2="137" y2="97.0" stroke="#d3dbe2" stroke-width="1"/>
+<polyline points="8.0,66.5 16.1,66.5 24.1,66.5 32.2,66.5 40.3,66.5 48.3,66.5 56.4,66.5 64.5,66.5 72.5,66.5 80.6,127.5 88.7,127.5 96.7,127.5 104.8,127.5 112.9,127.5 120.9,127.5 129.0,127.5" fill="none" stroke="#8b98a4" stroke-width="1.6" stroke-dasharray="4 3"/>
+<polyline class="draw" style="--d:0.15s" points="8.0,66.8 16.1,65.6 24.1,65.4 32.2,66.3 40.3,66.2 48.3,66.9 56.4,67.2 64.5,67.2 72.5,67.3 80.6,126.8 88.7,127.5 96.7,127.4 104.8,128.0 112.9,128.3 120.9,128.4 129.0,128.1" fill="none" stroke="#df6327" stroke-width="2.2" stroke-linejoin="round"/>
+<text x="68.5" y="175.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="12.5" font-weight="700" fill="#12202b" text-anchor="middle">t = 0</text>
+<text x="68.5" y="191.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="400" fill="#55646f" text-anchor="middle">α = 1.00</text>
+<rect x="152" y="36" width="137" height="122" fill="#ffffff" stroke="#d3dbe2" stroke-width="1"/>
+<line x1="152" y1="97.0" x2="289" y2="97.0" stroke="#d3dbe2" stroke-width="1"/>
+<polyline points="160.0,66.5 168.1,66.5 176.1,66.5 184.2,66.5 192.3,66.5 200.3,66.5 208.4,66.5 216.5,66.5 224.5,66.5 232.6,127.5 240.7,127.5 248.7,127.5 256.8,127.5 264.9,127.5 272.9,127.5 281.0,127.5" fill="none" stroke="#8b98a4" stroke-width="1.6" stroke-dasharray="4 3"/>
+<polyline class="draw" style="--d:0.30s" points="160.0,73.6 168.1,54.2 176.1,51.8 184.2,65.2 192.3,64.0 200.3,75.2 208.4,80.4 216.5,80.3 224.5,81.5 232.6,113.4 240.7,125.6 248.7,123.3 256.8,132.8 264.9,138.3 272.9,139.7 281.0,135.3" fill="none" stroke="#df6327" stroke-width="2.2" stroke-linejoin="round"/>
+<text x="220.5" y="175.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="12.5" font-weight="700" fill="#12202b" text-anchor="middle">t = 25</text>
+<text x="220.5" y="191.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="400" fill="#55646f" text-anchor="middle">α = 0.84</text>
+<rect x="304" y="36" width="137" height="122" fill="#ffffff" stroke="#d3dbe2" stroke-width="1"/>
+<line x1="304" y1="97.0" x2="441" y2="97.0" stroke="#d3dbe2" stroke-width="1"/>
+<polyline points="312.0,66.5 320.1,66.5 328.1,66.5 336.2,66.5 344.3,66.5 352.3,66.5 360.4,66.5 368.5,66.5 376.5,66.5 384.6,127.5 392.7,127.5 400.7,127.5 408.8,127.5 416.9,127.5 424.9,127.5 433.0,127.5" fill="none" stroke="#8b98a4" stroke-width="1.6" stroke-dasharray="4 3"/>
+<polyline class="draw" style="--d:0.45s" points="312.0,83.8 320.1,49.4 328.1,45.1 336.2,68.9 344.3,66.8 352.3,86.7 360.4,96.0 368.5,95.7 376.5,97.9 384.6,97.6 392.7,119.3 400.7,115.3 408.8,132.2 416.9,142.1 424.9,144.6 433.0,136.6" fill="none" stroke="#df6327" stroke-width="2.2" stroke-linejoin="round"/>
+<text x="372.5" y="175.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="12.5" font-weight="700" fill="#12202b" text-anchor="middle">t = 50</text>
+<text x="372.5" y="191.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="400" fill="#55646f" text-anchor="middle">α = 0.48</text>
+<rect x="456" y="36" width="137" height="122" fill="#ffffff" stroke="#d3dbe2" stroke-width="1"/>
+<line x1="456" y1="97.0" x2="593" y2="97.0" stroke="#d3dbe2" stroke-width="1"/>
+<polyline points="464.0,66.5 472.1,66.5 480.1,66.5 488.2,66.5 496.3,66.5 504.3,66.5 512.4,66.5 520.5,66.5 528.5,66.5 536.6,127.5 544.7,127.5 552.7,127.5 560.8,127.5 568.9,127.5 576.9,127.5 585.0,127.5" fill="none" stroke="#8b98a4" stroke-width="1.6" stroke-dasharray="4 3"/>
+<polyline class="draw" style="--d:0.60s" points="464.0,96.1 472.1,51.7 480.1,46.2 488.2,76.8 496.3,74.1 504.3,99.8 512.4,111.8 520.5,111.4 528.5,114.2 536.6,81.8 544.7,109.7 552.7,104.5 560.8,126.3 568.9,139.0 576.9,142.3 585.0,132.0" fill="none" stroke="#df6327" stroke-width="2.2" stroke-linejoin="round"/>
+<text x="524.5" y="175.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="12.5" font-weight="700" fill="#12202b" text-anchor="middle">t = 75</text>
+<text x="524.5" y="191.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="400" fill="#55646f" text-anchor="middle">α = 0.13</text>
+<rect x="608" y="36" width="137" height="122" fill="#ffffff" stroke="#d3dbe2" stroke-width="1"/>
+<line x1="608" y1="97.0" x2="745" y2="97.0" stroke="#d3dbe2" stroke-width="1"/>
+<polyline points="616.0,66.5 624.1,66.5 632.1,66.5 640.2,66.5 648.3,66.5 656.3,66.5 664.4,66.5 672.5,66.5 680.5,66.5 688.6,127.5 696.7,127.5 704.7,127.5 712.8,127.5 720.9,127.5 728.9,127.5 737.0,127.5" fill="none" stroke="#8b98a4" stroke-width="1.6" stroke-dasharray="4 3"/>
+<polyline class="draw" style="--d:0.75s" points="616.0,108.0 624.1,60.3 632.1,54.4 640.2,87.3 648.3,84.4 656.3,111.9 664.4,124.9 672.5,124.4 680.5,127.4 688.6,68.7 696.7,98.7 704.7,93.1 712.8,116.5 720.9,130.2 728.9,133.7 737.0,122.7" fill="none" stroke="#df6327" stroke-width="2.2" stroke-linejoin="round"/>
+<text x="676.5" y="175.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="12.5" font-weight="700" fill="#12202b" text-anchor="middle">t = 99</text>
+<text x="676.5" y="191.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="400" fill="#55646f" text-anchor="middle">α = 0.00</text>
+<text x="0.0" y="226.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#12202b" text-anchor="start">input:   √α<tspan dy="3" font-size="9.5">t</tspan><tspan dy="-3"> · demo + √(1 − α</tspan><tspan dy="3" font-size="9.5">t</tspan><tspan dy="-3">) · noise,   t picked at random from 0 … 99</tspan></text>
+<text x="0.0" y="246.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#12202b" text-anchor="start">target: the noise that was added  (predict ε, loss = mean squared error)</text>
+<g transform="translate(0,276)">
+<text x="0.0" y="0.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#12202b" text-anchor="start">Sampling: from pure noise to an action (schematic, one coordinate, a perfect network)</text>
+<g transform="translate(0,14)"><line x1="52" y1="150" x2="452" y2="150" stroke="#55646f" stroke-width="1.2"/>
+<line x1="52" y1="8" x2="52" y2="150" stroke="#55646f" stroke-width="1.2"/>
+<line x1="52" y1="34.6" x2="452" y2="34.6" stroke="#8b98a4" stroke-width="1.2" stroke-dasharray="4 3"/>
+<line x1="52.0" y1="150" x2="52.0" y2="154" stroke="#55646f" stroke-width="1.2"/>
+<text x="52.0" y="167.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#55646f" text-anchor="middle">0</text>
+<line x1="132.0" y1="150" x2="132.0" y2="154" stroke="#55646f" stroke-width="1.2"/>
+<text x="132.0" y="167.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#55646f" text-anchor="middle">0.2</text>
+<line x1="212.0" y1="150" x2="212.0" y2="154" stroke="#55646f" stroke-width="1.2"/>
+<text x="212.0" y="167.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#55646f" text-anchor="middle">0.4</text>
+<line x1="292.0" y1="150" x2="292.0" y2="154" stroke="#55646f" stroke-width="1.2"/>
+<text x="292.0" y="167.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#55646f" text-anchor="middle">0.6</text>
+<line x1="372.0" y1="150" x2="372.0" y2="154" stroke="#55646f" stroke-width="1.2"/>
+<text x="372.0" y="167.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#55646f" text-anchor="middle">0.8</text>
+<line x1="452.0" y1="150" x2="452.0" y2="154" stroke="#55646f" stroke-width="1.2"/>
+<text x="452.0" y="167.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#55646f" text-anchor="middle">1</text>
+<text x="252.0" y="185.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="400" fill="#55646f" text-anchor="middle">share of the way from noise to action</text>
+<text x="44.0" y="127.3" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#55646f" text-anchor="end">noise</text>
+<text x="44.0" y="38.6" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#55646f" text-anchor="end">demo</text>
+<polyline class="draw" points="52.0,123.3 92.0,108.4 132.0,99.5 172.0,90.0 212.0,80.3 252.0,70.6 292.0,61.0 332.0,51.9 372.0,43.5 412.0,35.8 452.0,34.6" fill="none" stroke="#df6327" stroke-width="2.4" stroke-linejoin="round"/>
+<circle cx="52.0" cy="123.3" r="4.6" fill="#ffffff" stroke="#df6327" stroke-width="2"/>
+<circle cx="92.0" cy="108.4" r="3.8" fill="#df6327" stroke="#df6327" stroke-width="2"/>
+<circle cx="132.0" cy="99.5" r="3.8" fill="#df6327" stroke="#df6327" stroke-width="2"/>
+<circle cx="172.0" cy="90.0" r="3.8" fill="#df6327" stroke="#df6327" stroke-width="2"/>
+<circle cx="212.0" cy="80.3" r="3.8" fill="#df6327" stroke="#df6327" stroke-width="2"/>
+<circle cx="252.0" cy="70.6" r="3.8" fill="#df6327" stroke="#df6327" stroke-width="2"/>
+<circle cx="292.0" cy="61.0" r="3.8" fill="#df6327" stroke="#df6327" stroke-width="2"/>
+<circle cx="332.0" cy="51.9" r="3.8" fill="#df6327" stroke="#df6327" stroke-width="2"/>
+<circle cx="372.0" cy="43.5" r="3.8" fill="#df6327" stroke="#df6327" stroke-width="2"/>
+<circle cx="412.0" cy="35.8" r="3.8" fill="#df6327" stroke="#df6327" stroke-width="2"/>
+<circle cx="452.0" cy="34.6" r="4.6" fill="#df6327" stroke="#df6327" stroke-width="2"/></g>
+<text x="492.0" y="38.0" font-family="Liberation Sans Narrow, Arial Narrow, Liberation Sans, Arial, sans-serif" font-size="24" font-weight="800" fill="#df6327" text-anchor="start">10 network calls</text>
+<text x="492.0" y="62.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#12202b" text-anchor="start">DDIM, deterministic (η = 0)</text>
+<text x="492.0" y="80.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#12202b" text-anchor="start">100 training steps → 10 sampling steps</text>
+<text x="492.0" y="104.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#55646f" text-anchor="start">the path curves: the noise level follows</text>
+<text x="492.0" y="122.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#55646f" text-anchor="start">a cosine schedule</text>
+<text x="492.0" y="150.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#12202b" text-anchor="start">lift, seed 1001: 63.0 % at 10 calls,</text>
+<text x="492.0" y="168.0" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#12202b" text-anchor="start">60.5 % at 5 (1 call: n/c)</text>
+</g>
+</svg>

@@ -1,0 +1,186 @@
+<title>Flow Matching and DAgger</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="shared.css">
+
+<style>
+/* Page 3 (condensed): flow-matching rollouts (2x2 grid) + feature column, three charts, four findings */
+:root { --fm: #149484; }
+.top3 { display: grid; grid-template-columns: 1.42fr 1fr; gap: 14px; align-items: stretch; }
+.vgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 12px; }
+.feat { display: grid; grid-template-rows: repeat(3, auto); gap: 10px; align-content: start; }
+.feat figure { margin: 0; display: grid; gap: 4px; }
+.feat img { width: 100%; height: auto; border-radius: 0; display: block; }
+.tiles3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 22px; }
+.findings.f4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.legend i.ok { background: var(--ok); } .legend i.bad { background: var(--neg); }
+</style>
+
+<div class="slide">
+  <header>
+    <div>
+      <div class="eyebrow">Flow matching vs diffusion on four tasks, DAgger on stacking, held-out seeds</div>
+      <h1>Flow matching, DAgger and what limits each task</h1>
+    </div>
+    <div class="pipe" aria-label="Pipeline">
+      <span class="t">scripted IK teacher, privileged state</span><i>→</i>
+      <span>student drives, teacher relabels (DAgger)</span><i>→</i>
+      <span class="s">diffusion or flow-matching policy</span><i>→</i>
+      <span>fresh-seed episodes</span>
+    </div>
+  </header>
+  <section class="findings f4" aria-label="Key findings" style="--hero:56px">
+    <div class="f"><div class="n"><span class="from">10.9</span> → <span class="cu">42.1</span> %<small>stacking, DAgger round 2</small></div><p>4× the demo-only student (10.9 %), still far from the 94 % teacher.</p></div>
+    <div class="f fm"><div class="n"><span class="from">62.8</span> → <span class="cu">78.2</span> %<small>lift, diffusion to flow matching</small></div><p>Flow matching is 15 points ahead and still reaches 66 % with one Euler step (a one-step diffusion comparison is not meaningful, see the caption below).</p></div>
+    <div class="f fm"><div class="n"><span class="from">27.5</span> → <span class="cu">57.0</span> %<small>pour at 5 steps, diffusion to flow matching</small></div><p>Flow at 5 steps beats diffusion at 50 steps (51.5 %).</p></div>
+    <div class="f neutral"><div class="n">92.3 vs 92.2 %<small>drawer</small></div><p>A tie: the teacher is the ceiling. Stacking: flow 7.3 %, diffusion 10.2 %.</p></div>
+  </section>
+
+  <section class="top3">
+    <article class="panel">
+      <div class="ph"><h2>Flow-matching policies in action</h2>
+        <div class="legend"><span><i class="ok"></i>success</span><span><i class="bad"></i>failure</span><span class="tag">clips pick both outcomes; rates are the held-out test rates</span></div>
+      </div>
+      <div class="vgrid">
+        <div class="fig"><div class="media"><video src="media/fm_lift_2x2.mp4" autoplay muted loop playsinline aria-label="Flow-matching policy lifting a cube, four rollouts, three succeed"></video></div>
+          <div class="cap"><span><b>Lift</b>, flow, 5 steps, 3 of 4 shown</span><span class="v" style="color:var(--fm)">78.2 % (10 st.)</span></div></div>
+        <div class="fig"><div class="media"><video src="media/fm_pour_2x2.mp4" autoplay muted loop playsinline aria-label="Flow-matching policy pouring, four rollouts, three succeed"></video></div>
+          <div class="cap"><span><b>Pour</b>, flow, 5 steps, 3 of 4 shown</span><span class="v" style="color:var(--fm)">57.0 %</span></div></div>
+        <div class="fig"><div class="media"><video src="media/fm_drawer_2x2.mp4" autoplay muted loop playsinline aria-label="Flow-matching policy opening a drawer, four rollouts, three succeed and one stays partly open"></video></div>
+          <div class="cap"><span><b>Drawer</b>, flow, 5 steps, 3 of 4 shown</span><span class="v" style="color:var(--fm)">92.3 % (10 st.)</span></div></div>
+        <div class="fig"><div class="media"><video src="media/fm_stack_2x2.mp4" autoplay muted loop playsinline aria-label="Flow-matching policy on stacking, four rollouts, one succeeds"></video></div>
+          <div class="cap"><span><b>Stack</b>, flow, demos only, 5 steps, 1 of 4</span><span class="v" style="color:var(--neg)">7.3 % (10 st.)</span></div></div>
+      </div>
+    </article>
+    <article class="panel">
+      <div class="ph"><h2>What the encoder looks at</h2><span class="tag">spatial-softmax attention, cyan = top-12 keypoints</span></div>
+      <div class="feat">
+        <figure><img src="media/feat_p3_lift_dp.png" alt="Attention of the diffusion lift policy while holding the cube"><div class="cap"><span><b>Lift, diffusion</b>, holding the cube, 3.2 s</span></div></figure>
+        <figure><img src="media/feat_p3_lift_fm.png" alt="Attention of the flow-matching lift policy while holding the cube"><div class="cap"><span><b>Lift, flow matching</b>, holding the cube, 3.2 s</span></div></figure>
+        <figure><img src="media/feat_p3_drawer_fm.png" alt="Attention of the flow-matching drawer policy approaching the handle"><div class="cap"><span><b>Drawer, flow matching</b>, approach, 2.0 s</span></div></figure>
+      </div>
+      <p class="note">Same method as slide 1 (heatmap = softmax maps weighted by how strongly the policy reads each keypoint). Both lift policies attend to the cube in the wrist view once it is held; the scenes are different random draws, so these are illustrations, not a paired test.</p>
+    </article>
+  </section>
+
+  <section class="panel" aria-label="Main results">
+    <div class="ph"><h2>Main results</h2>
+      <div class="legend"><span><i style="background:var(--dp)"></i>diffusion (DDIM)</span><span><i style="background:var(--fm)"></i>flow matching (Euler)</span><span><i style="background:var(--teacher)"></i>scripted teacher</span></div>
+    </div>
+    <div class="tiles3">
+      <div class="tile">
+        <div class="ph"><h3>Flow vs diffusion, four tasks</h3><span class="tag">3 × 200 eps, pour 200, ±1 SE</span></div>
+        <div class="chart" id="chart-fm"></div>
+        <div class="cap"><span>same encoder, transformer and demos; only the target and sampler differ</span></div>
+      </div>
+      <div class="tile">
+        <div class="ph"><h3>Success vs sampling steps</h3><span class="tag">lift seed 1001, pour seed 201</span></div>
+        <div class="chart" id="chart-steps"></div>
+        <div class="cap"><span>flow reaches 66 % on lift with 1 step; not comparable to DDIM with 1 step, which only evaluates t=0 on pure noise; pour is best at 5 steps</span></div>
+      </div>
+      <div class="tile">
+        <div class="ph"><h3>Stacking: DAgger, held-out seeds</h3><span class="tag">1002–1005, 800 eps, ±1 SE</span></div>
+        <div class="chart" id="chart-dagger"></div>
+        <div class="cap"><span>teacher 94 %; training from scratch on all DAgger data fails (hypothesis: relabelled student states are hard to fit)</span></div>
+      </div>
+    </div>
+  </section>
+
+
+  <footer>Flow vs diffusion: stack / drawer / lift on seeds 1001–1003, pour on seed 201, 200 episodes per seed (stack flow = 44 of 600), stacking DAgger on held-out seeds 1002–1005 (round 2 chosen on seed 1001), a first round-2 test on seed 1003 ran beside training on a full GPU and was replaced by an idle-GPU rerun (6 % → 43.5 %), DAgger gave no gain on the drawer (92 % student vs 90.5 % teacher), clips: 4 of 6–8 recorded episodes per task, drawer on the plain white cabinet, bars ±1 SE</footer>
+</div>
+
+<script>
+(function () {
+  const NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, text) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; }
+  const lin = (d0, d1, r0, r1) => v => r0 + (v - d0) / (d1 - d0) * (r1 - r0);
+  const mount = (id, svg) => document.getElementById(id).appendChild(svg);
+  const fills = { teacher: "var(--teacher)", dp: "var(--dp)", fm: "var(--fm)", neg: "var(--neg)", soft: "var(--dp-soft)", ref: "var(--ref)" };
+  function grid(svg, x, top, H, axisH) {
+    [0, 25, 50, 75, 100].forEach(t => {
+      svg.appendChild(el("line", { x1: x(t), x2: x(t), y1: top - 2, y2: H - axisH + 2, stroke: "var(--line)", "stroke-width": 1 }));
+      svg.appendChild(el("text", { x: x(t), y: H - 4, "text-anchor": "middle", class: "tick" }, t + "%"));
+    });
+  }
+  function se(svg, x, v, s, cy) {
+    svg.appendChild(el("line", { x1: x(v - s), x2: x(v + s), y1: cy, y2: cy, stroke: "var(--ink)", "stroke-width": 1.2 }));
+    [v - s, v + s].forEach(e => svg.appendChild(el("line", { x1: x(e), x2: x(e), y1: cy - 3.5, y2: cy + 3.5, stroke: "var(--ink)", "stroke-width": 1.2 })));
+  }
+
+  // Flow matching vs diffusion: grouped bars, four tasks
+  (function () {
+    const groups = [["stack, 10 steps", [[10.2, 1.23], [7.3, 1.06]]], ["drawer, 10 steps", [[92.2, 1.10], [92.3, 1.09]]],
+                    ["lift, 10 steps", [[62.8, 1.97], [78.2, 1.68]]], ["pour, 5 steps", [[27.5, 3.16], [57.0, 3.50]]]];
+    const W = 520, labelW = 122, bh = 26, gh = 2 * bh + 20, top = 4, axisH = 18, plotW = W - labelW - 66;
+    const H = top + groups.length * gh + axisH, x = v => labelW + v / 100 * plotW;
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Success, diffusion vs flow matching: stack 10.2 and 7.3 percent, drawer 92.2 and 92.3, lift 62.8 and 78.2, pour at 5 steps 27.5 and 57.0" });
+    grid(svg, x, top, H, axisH);
+    groups.forEach(([label, vals], g) => {
+      const y0 = top + g * gh + 4;
+      svg.appendChild(el("text", { x: 0, y: y0 + bh + 4, class: "lbl" }, label));
+      vals.forEach(([v, s], k) => {
+        const y = y0 + k * bh;
+        svg.appendChild(el("rect", { x: x(0), y: y + 1, width: Math.max(1.5, x(v) - x(0)), height: bh - 2, fill: k === 0 ? "var(--dp)" : "var(--fm)" }));
+        se(svg, x, v, s, y + bh / 2);
+        svg.appendChild(el("text", { x: x(v + s) + 6, y: y + bh - 4, "font-weight": 600, "font-size": 12, fill: k === 0 ? "var(--dp)" : "var(--fm)" }, v.toFixed(1) + "%"));
+      });
+    });
+    mount("chart-fm", svg);
+  })();
+
+  // Success vs sampling steps: two small multiples (lift, pour)
+  (function () {
+    const W = 520, H = 330, T = 26, B = 40, gapX = 34, pw = (W - gapX - 30 - 8) / 2;
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Success vs sampling steps. Lift diffusion 0, 60.5, 63.0 percent and flow matching 66, 81, 77 at 1, 5, 10 steps. Pour diffusion 27.5 at 5 and 51.5 at 50 steps; flow matching 57, 50, 41.5 at 5, 10, 50 steps" });
+    const sy = lin(0, 100, H - B, T);
+    const panels = [
+      { title: "lift", left: 30, steps: [1, 5, 10], dp: [[1, 0, -9], [5, 60.5, 14], [10, 63.0, 14]], fm: [[1, 66, -8], [5, 81, -8], [10, 77, -8]] },
+      { title: "pour", left: 30 + pw + gapX, steps: [5, 10, 50], dp: [[5, 27.5, 14], [50, 51.5, -8]], fm: [[5, 57, -8], [10, 50, -8], [50, 41.5, 14]] }];
+    panels.forEach(P => {
+      const sx = lin(Math.log(P.steps[0]), Math.log(P.steps[2]), P.left + 18, P.left + pw - 18);
+      svg.appendChild(el("rect", { x: P.left, y: T, width: pw, height: H - B - T, fill: "none", stroke: "var(--line)" }));
+      [0, 50, 100].forEach(t => {
+        svg.appendChild(el("line", { x1: P.left, x2: P.left + pw, y1: sy(t), y2: sy(t), stroke: "var(--line)", "stroke-width": .7 }));
+        svg.appendChild(el("text", { x: P.left - 4, y: sy(t) + 3, "text-anchor": "end", class: "tick" }, t + "%"));
+      });
+      svg.appendChild(el("text", { x: P.left, y: T - 8, "font-size": 12, "font-weight": 700, fill: "var(--ink)" }, P.title));
+      P.steps.forEach(s => svg.appendChild(el("text", { x: sx(Math.log(s)), y: H - B + 13, "text-anchor": "middle", class: "tick" }, s)));
+      svg.appendChild(el("text", { x: P.left + pw / 2, y: H - 4, "text-anchor": "middle", class: "tick" }, "sampling steps"));
+      [["dp", "var(--dp)"], ["fm", "var(--fm)"]].forEach(([k, c]) => {
+        svg.appendChild(el("path", { d: P[k].map((p, i) => (i ? "L" : "M") + sx(Math.log(p[0])).toFixed(1) + " " + sy(p[1]).toFixed(1)).join(""), fill: "none", stroke: c, "stroke-width": 2.2, "stroke-linejoin": "round" }));
+        P[k].forEach(([s, v, dy]) => {
+          svg.appendChild(el("circle", { cx: sx(Math.log(s)), cy: sy(v), r: 4, fill: c, stroke: "#fff", "stroke-width": 1.2 }));
+          svg.appendChild(el("text", { x: sx(Math.log(s)), y: sy(v) + dy, "text-anchor": "middle", "font-size": 12, "font-weight": 600, fill: c }, v % 1 ? v.toFixed(1) : v));
+        });
+      });
+    });
+    mount("chart-steps", svg);
+  })();
+
+  // Stacking: held-out success bars (rows: label, value %, SE %, kind)
+  (function () {
+    const rows = [["Scripted teacher", 94.0, 2.37, "teacher"],
+      ["DAgger round 2, diffusion", 42.1, 1.75, "dp"], ["DAgger round 3, diffusion", 23.1, 1.49, "dp"],
+      ["Demos only, diffusion", 10.9, 1.10, "dp"], ["Demos only, flow", 9.3, 1.02, "fm"],
+      ["All data, scratch, flow", 2.8, 0.58, "fm"], ["All data, scratch, diffusion", 2.0, 0.49, "dp"]];
+    const W = 520, labelW = 178, rowH = 41, top = 4, axisH = 18, H = top + rows.length * rowH + axisH, plotW = W - labelW - 58, x = v => labelW + v / 100 * plotW;
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Stacking held-out success: scripted teacher 94.0, DAgger round 2 42.1, round 3 23.1, demos only diffusion 10.9 and flow 9.3, from scratch 2.0 and 2.8 percent. training from scratch on all DAgger data 2.0 to 2.8 percent" });
+    grid(svg, x, top, H, axisH);
+    rows.forEach(([label, v, s, kind], i) => {
+      const y = top + i * rowH, bh = 18, by = y + (rowH - bh) / 2;
+      svg.appendChild(el("text", { x: 0, y: y + rowH / 2 + 4, class: "lbl", "font-size": 12 }, label));
+      svg.appendChild(el("rect", { x: x(0), y: by, width: Math.max(1.5, x(v) - x(0)), height: bh, fill: fills[kind] }));
+      se(svg, x, v, s, by + bh / 2);
+      svg.appendChild(el("text", { x: x(v + s) + 6, y: by + bh / 2 + 4, "font-weight": 600, "font-size": 12 }, v.toFixed(1) + "%"));
+    });
+    mount("chart-dagger", svg);
+  })();
+
+})();
+</script>
+<script src="shared.js"></script>

@@ -1,0 +1,4 @@
+phase,time_s,wrist_share_top10pct
+approach,0.5,0.27450980392156865
+grasp,1.4,0.7254901960784313
+lift,2.8,0.5294117647058824

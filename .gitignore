@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+runs/
+logs/
+outputs/
+node_modules/
+report/video/out/
+report/tools/pylib/
+*.pt
+*.npy
+*.npz
+*.ckpt
+*.pth
+.env
+report/export_build/slides/*.pptx

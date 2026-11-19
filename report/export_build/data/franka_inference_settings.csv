@@ -1,0 +1,6 @@
+configuration,success_pct,se_pct,kind
+Wrist · execute 8 / 16,57.0,3.5,dp
+Wrist · execute 4 / 16,56.5,3.51,dp-soft
+Wrist · execute 2 / 16,52.5,3.53,dp-soft
+Workspace · DDIM 10,42.0,3.49,dp
+Workspace · DDIM 50,43.0,4.95,dp-soft

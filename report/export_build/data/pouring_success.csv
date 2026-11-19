@@ -1,0 +1,5 @@
+configuration,success_pct,se_pct,kind
+Teacher · privileged (MAT),76.0,0,teacher
+"DP · bc_x2 (fine-tuned, 1,200 demos)",63.0,2.41,dp
+DP · no-lag model,62.5,2.42,dp
+TMAD-RGB (non-diffusion),89.2,0,ref

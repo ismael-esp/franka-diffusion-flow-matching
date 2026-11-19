@@ -1,0 +1,198 @@
+<title>Drawer and Stacking Students</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="shared.css">
+
+<style>
+/* Page 2 additions: two task panels side by side, a four-tile analysis row */
+@media (min-width: 1100px) { .panels.two { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1100px) { .motion .tiles.t2 { grid-template-columns: 1.25fr 1fr 1fr 1.25fr; } }
+.tiles.tw { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+.panels.two .media { max-width: 57%; margin: 0 auto; }
+.feat3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.feat3 figure { margin: 0; display: grid; gap: 4px; } .feat3 img { width: 100%; height: auto; border-radius: 0; display: block; }
+.feat3 .cap { flex-wrap: wrap; justify-content: flex-start; gap: 2px 10px; }
+.findings.f4 { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+.legend i.ok { background: var(--ok); } .legend i.bad { background: var(--neg); }
+</style>
+
+<div class="slide">
+  <header>
+    <div>
+      <div class="eyebrow">Teacher–student distillation in Isaac Lab and Isaac Sim 5.1, two new Franka tasks</div>
+      <h1>Drawer and stacking: the teacher sets the ceiling for the diffusion student</h1>
+    </div>
+    <div class="pipe" aria-label="Pipeline">
+      <span class="t">scripted IK teacher, privileged state</span><i>→</i>
+      <span>demos + DART noise</span><i>→</i>
+      <span class="s">diffusion policy, RGB + proprio</span><i>→</i>
+      <span>600 fresh-seed episodes</span>
+    </div>
+  </header>
+  <section class="findings f4" aria-label="Key findings" style="--hero:56px">
+    <div class="f"><div class="n"><span class="from">8.7</span> → <span class="cu">92.2</span> %<small>drawer student, PPO teacher to scripted teacher</small></div><p>Same recipe, scripted IK teacher instead of PPO.</p></div>
+    <div class="f"><div class="n">25×<small>0.061 → 0.0024</small></div><p>Smoother teacher actions: the PPO teacher is bang-bang.</p></div>
+    <div class="f neutral"><div class="n">92.2 vs 90.5 %<small>DP vs teacher</small></div><p>Drawer student matches its teacher on 600 fresh episodes.</p></div>
+    <div class="f neg"><div class="n"><span class="cu">10.2</span> %<small>stacking student, vs 94 % teacher</small></div><p>Stacking student: 63 % never complete the first stack.</p></div>
+  </section>
+
+  <section class="panels two">
+    <!-- Drawer opening -->
+    <article class="panel">
+      <div class="ph"><h2>Franka drawer opening</h2><span class="tag">Panda, 8-D actions, 8 s at 30 Hz</span></div>
+      <div class="fig">
+        <div class="media">
+          <video src="media/drawer_dp_2x2.mp4" autoplay muted loop playsinline aria-label="Diffusion policy trained on the scripted teacher opening the drawer, four rollouts"></video>
+        </div>
+        <div class="cap"><span><b>Diffusion policy</b>, scripted-teacher demos, teacher itself 90.5 %</span><span class="v" style="color:var(--dp)">92.2 %</span></div>
+      </div>
+      <div class="grow sep">
+        <div class="ph"><h3>Success rate</h3><span class="tag">DP rows: 600 fresh episodes, ±1 SE</span></div>
+        <div class="chart" id="chart-drawer"></div>
+      </div>
+    </article>
+
+    <!-- Cube stacking -->
+    <article class="panel">
+      <div class="ph"><h2>Franka three-cube stacking</h2><span class="tag">Panda, 8-D actions, 15 s at 20 Hz</span></div>
+      <div class="fig">
+        <div class="media">
+          <video src="media/stack_dp_2x2.mp4" autoplay muted loop playsinline aria-label="Diffusion policy stacking: top row stacks one cube then stalls, bottom row never completes the first stack"></video>
+          <span class="ov r1 neg">One stacked</span>
+          <span class="ov r2 neg">None stacked</span>
+        </div>
+        <div class="cap"><span><b>Diffusion policy</b>, clean + DART 0.01 demos, teacher 94 %</span><span class="v" style="color:var(--neg)">10.2 %</span></div>
+      </div>
+      <div class="grow sep">
+        <div class="ph"><h3>Success rate</h3><span class="tag">DP row: 600 fresh episodes, ±1 SE</span></div>
+        <div class="chart" id="chart-stack"></div>
+      </div>
+    </article>
+  </section>
+
+  <section class="panel motion" aria-label="Why the two students differ">
+    <div class="ph"><h2>Why the drawer student works and the stacking student does not</h2>
+      <div class="legend">
+        <span><i style="background:var(--teacher)"></i>PPO teacher</span>
+        <span><i style="background:var(--dp)"></i>scripted teacher / DP</span>
+      </div>
+    </div>
+    <div class="tiles tw">
+      <div class="tile">
+        <div class="ph"><h3>Teacher actions, one drawer demo</h3><span class="tag">normalised joint targets</span></div>
+        <div class="chart" id="c-trace"></div>
+        <div class="cap"><span>mean step-to-step change <b>0.061</b> PPO vs <b>0.0024</b> scripted</span><span><b>25×</b> smoother</span></div>
+      </div>
+      <div class="tile">
+        <div class="ph"><h3>Demo yield under DART noise</h3><span class="tag">teacher rollouts that still succeed</span></div>
+        <div class="chart" id="chart-dart"></div>
+        <div class="cap"><span>noise in normalised joint units (0.10 ≈ 0.25 rad): stacking needs mm-level placement, 0.10 left 0 of 1,440 rollouts; the DP used 0.01</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="What the encoder looks at">
+    <div class="ph"><h2>What the vision encoder looks at</h2>
+      <div class="legend"><span><i class="heat"></i>attention heatmap</span><span><i class="kp"></i>top-12 keypoints</span><span class="tag">same method as slide 1, 3rd-person view | workspace camera | wrist camera</span></div>
+    </div>
+    <div class="feat3">
+      <figure><img src="media/feat_p2_drawer_dp.png" alt="Drawer student attention while approaching the handle"><div class="cap"><span><b>Drawer</b>, approach, 2.0 s</span><span>wrist camera locks on the handle</span></div></figure>
+      <figure><img src="media/feat_p2_stack_grasp.png" alt="Stacking student attention while grasping a cube"><div class="cap"><span><b>Stack</b>, grasp, 4.0 s</span><span>wrist camera sees the cube between the fingers</span></div></figure>
+      <figure><img src="media/feat_p2_stack_fail.png" alt="Stacking student attention at the failure moment"><div class="cap"><span><b>Stack</b>, failure, 11.5 s</span><span>stalls holding cube 3 beside the stack</span></div></figure>
+    </div>
+  </section>
+
+
+  <footer>Success: drawer top drawer ≥ 0.30 m of 0.39 m open at 8 s, stack: both pairs within 4 cm in xy and 4.68 ± 0.5 cm in height at 15 s, DP rows: 600 episodes on fresh seeds 1001–1003, teachers: 200 (drawer) / 100 (stack) episodes, 400 clean + 400 DART demos per DP, bars ±1 SE</footer>
+</div>
+
+<script>
+const TR = {"ppo": [[0.126, -0.351], [0.56, -0.064], [0.53, -0.004], [0.494, 0.369], [0.063, 0.626], [-0.144, 0.235], [-0.012, 0.013], [-0.123, -0.018], [0.111, -0.62], [0.333, -1.0], [-0.022, -0.619], [-0.316, -0.226], [-0.025, -0.447], [0.1, -0.343], [-0.126, -0.002], [-0.137, 0.147], [-0.01, 0.225], [-0.073, 0.081], [-0.008, 0.046], [0.07, 0.0], [0.158, -0.162], [0.187, -0.248], [0.231, -0.358], [0.25, -0.486], [0.21, -0.62], [0.121, -0.375], [0.184, -0.723], [0.121, -0.631], [0.322, -0.625], [0.344, -0.525], [0.334, -0.539], [0.272, -0.601], [0.24, -0.551], [0.176, -0.565], [0.185, -0.569], [0.166, -0.552], [0.229, -0.605], [0.225, -0.523], [0.207, -0.577], [0.199, -0.566], [0.182, -0.536], [0.179, -0.561], [0.169, -0.612], [0.178, -0.555], [0.163, -0.598], [0.186, -0.558], [0.177, -0.591], [0.161, -0.539], [0.177, -0.589], [0.175, -0.541], [0.17, -0.614], [0.164, -0.518], [0.179, -0.585], [0.162, -0.568], [0.172, -0.595], [0.164, -0.551], [0.165, -0.638], [0.188, -0.552], [0.187, -0.666], [0.152, -0.537], [0.147, -0.589], [0.175, -0.565], [0.185, -0.605], [0.167, -0.552], [0.168, -0.596], [0.147, -0.57], [0.168, -0.618], [0.16, -0.559], [0.186, -0.62], [0.133, -0.566], [0.164, -0.647], [0.163, -0.548], [0.159, -0.636], [0.163, -0.571], [0.202, -0.63], [0.151, -0.57], [0.164, -0.577], [0.158, -0.596], [0.166, -0.56], [0.166, -0.591], [0.163, -0.554], [0.161, -0.602], [0.164, -0.561], [0.159, -0.601], [0.167, -0.563], [0.173, -0.629], [0.159, -0.528], [0.168, -0.596], [0.153, -0.556], [0.156, -0.597], [0.168, -0.565], [0.152, -0.602], [0.166, -0.572], [0.145, -0.655], [0.15, -0.588], [0.155, -0.64], [0.151, -0.569], [0.175, -0.665], [0.194, -0.537], [0.145, -0.622], [0.15, -0.572], [0.149, -0.619], [0.165, -0.557], [0.155, -0.592], [0.164, -0.576], [0.139, -0.657], [0.155, -0.609], [0.175, -0.644], [0.161, -0.559], [0.187, -0.608], [0.125, -0.573], [0.165, -0.63], [0.167, -0.551], [0.158, -0.636], [0.161, -0.546], [0.155, -0.637], [0.16, -0.551], [0.191, -0.63], [0.137, -0.58], [0.181, -0.615], [0.149, -0.574], [0.149, -0.646], [0.183, -0.605], [0.135, -0.627], [0.147, -0.583], [0.158, -0.658], [0.177, -0.621], [0.162, -0.6], [0.137, -0.619], [0.148, -0.627], [0.168, -0.571], [0.149, -0.648], [0.144, -0.564], [0.152, -0.642], [0.149, -0.564], [0.153, -0.651], [0.176, -0.578], [0.2, -0.663], [0.093, -0.588], [0.168, -0.639], [0.141, -0.588], [0.154, -0.637], [0.153, -0.565], [0.15, -0.63], [0.148, -0.569], [0.159, -0.646], [0.14, -0.573], [0.161, -0.655], [0.148, -0.538], [0.148, -0.638], [0.176, -0.583], [0.15, -0.654], [0.134, -0.605], [0.177, -0.616], [0.131, -0.59], [0.159, -0.659], [0.145, -0.561], [0.15, -0.652], [0.147, -0.574], [0.173, -0.666], [0.137, -0.567], [0.169, -0.683], [0.126, -0.58], [0.169, -0.673], [0.158, -0.572], [0.146, -0.669], [0.192, -0.598], [0.133, -0.64], [0.154, -0.583], [0.155, -0.653], [0.144, -0.576], [0.205, -0.656], [0.111, -0.588], [0.184, -0.642], [0.138, -0.548], [0.196, -0.667], [0.112, -0.6], [0.148, -0.634], [0.155, -0.614], [0.16, -0.651], [0.171, -0.606], [0.133, -0.662], [0.166, -0.552], [0.16, -0.643], [0.128, -0.551], [0.153, -0.646], [0.208, -0.613], [0.119, -0.629], [0.144, -0.598], [0.154, -0.64], [0.15, -0.57], [0.173, -0.6], [0.151, -0.558], [0.126, -0.622], [0.155, -0.571], [0.208, -0.627], [0.11, -0.623], [0.146, -0.645], [0.167, -0.593], [0.162, -0.646], [0.168, -0.558], [0.137, -0.598], [0.142, -0.589], [0.154, -0.643], [0.138, -0.575], [0.156, -0.609], [0.172, -0.664], [0.131, -0.616], [0.157, -0.609], [0.148, -0.603], [0.15, -0.611], [0.145, -0.585], [0.148, -0.623], [0.132, -0.626], [0.152, -0.635], [0.135, -0.582], [0.128, -0.647], [0.192, -0.563], [0.127, -0.592], [0.014, -0.268], [0.116, -0.793], [0.292, -0.554], [0.123, -0.659], [0.206, -0.567], [0.186, -0.69], [0.145, -0.645], [0.156, -0.603], [0.129, -0.573], [0.187, -0.617], [0.171, -0.601], [0.175, -0.582], [0.185, -0.643], [0.137, -0.576], [0.185, -0.633], [0.164, -0.586], [0.162, -0.648], [0.159, -0.583], [0.19, -0.646], [0.159, -0.579], [0.159, -0.642]], "scr": [[-0.016, -0.805], [-0.024, -0.804], [-0.026, -0.805], [-0.027, -0.806], [-0.029, -0.805], [-0.03, -0.804], [-0.032, -0.803], [-0.033, -0.802], [-0.034, -0.802], [-0.034, -0.802], [-0.035, -0.801], [-0.036, -0.8], [-0.036, -0.799], [-0.036, -0.798], [-0.036, -0.797], [-0.036, -0.796], [-0.037, -0.795], [-0.037, -0.793], [-0.037, -0.79], [-0.037, -0.788], [-0.037, -0.785], [-0.037, -0.783], [-0.037, -0.78], [-0.036, -0.777], [-0.036, -0.774], [-0.035, -0.771], [-0.035, -0.768], [-0.034, -0.764], [-0.034, -0.761], [-0.033, -0.757], [-0.032, -0.753], [-0.031, -0.75], [-0.03, -0.746], [-0.029, -0.742], [-0.028, -0.738], [-0.027, -0.734], [-0.026, -0.729], [-0.024, -0.725], [-0.023, -0.72], [-0.021, -0.715], [-0.02, -0.711], [-0.018, -0.706], [-0.016, -0.701], [-0.014, -0.696], [-0.012, -0.69], [-0.01, -0.685], [-0.008, -0.679], [-0.005, -0.673], [-0.003, -0.668], [-0.0, -0.662], [0.003, -0.655], [0.005, -0.649], [0.008, -0.643], [0.011, -0.637], [0.012, -0.64], [0.013, -0.643], [0.014, -0.646], [0.015, -0.649], [0.016, -0.652], [0.017, -0.655], [0.014, -0.645], [0.011, -0.637], [0.008, -0.63], [0.006, -0.623], [0.005, -0.621], [0.004, -0.617], [0.003, -0.612], [0.002, -0.607], [0.001, -0.602], [0.0, -0.596], [-0.001, -0.589], [-0.003, -0.58], [-0.004, -0.573], [-0.005, -0.566], [-0.005, -0.564], [-0.005, -0.563], [-0.005, -0.563], [-0.005, -0.562], [-0.005, -0.562], [-0.005, -0.562], [-0.005, -0.561], [-0.005, -0.561], [-0.005, -0.561], [-0.005, -0.561], [-0.005, -0.561], [-0.005, -0.561], [-0.005, -0.561], [-0.005, -0.561], [-0.005, -0.561], [-0.005, -0.561], [0.0, -0.578], [0.006, -0.595], [0.011, -0.611], [0.017, -0.628], [0.022, -0.643], [0.027, -0.659], [0.032, -0.673], [0.038, -0.686], [0.043, -0.699], [0.048, -0.711], [0.053, -0.723], [0.058, -0.733], [0.063, -0.743], [0.067, -0.751], [0.072, -0.759], [0.077, -0.766], [0.081, -0.772], [0.086, -0.777], [0.09, -0.781], [0.094, -0.784], [0.098, -0.785], [0.102, -0.786], [0.106, -0.786], [0.11, -0.784], [0.114, -0.782], [0.117, -0.778], [0.121, -0.774], [0.124, -0.77], [0.127, -0.765], [0.129, -0.759], [0.132, -0.754], [0.134, -0.748], [0.133, -0.744], [0.132, -0.741], [0.131, -0.738], [0.131, -0.736], [0.131, -0.735], [0.131, -0.733], [0.131, -0.732], [0.131, -0.731], [0.131, -0.731], [0.131, -0.731], [0.131, -0.731], [0.131, -0.731], [0.131, -0.731], [0.131, -0.731], [0.131, -0.731], [0.131, -0.731], [0.131, -0.731], [0.131, -0.731], [0.131, -0.731], [0.132, -0.73], [0.132, -0.73], [0.132, -0.73], [0.132, -0.73], [0.132, -0.73], [0.132, -0.73], [0.132, -0.73], [0.132, -0.73], [0.132, -0.73], [0.132, -0.73], [0.133, -0.73], [0.133, -0.73], [0.133, -0.73], [0.133, -0.73], [0.133, -0.73], [0.133, -0.73], [0.133, -0.73], [0.133, -0.73], [0.133, -0.73], [0.134, -0.73], [0.134, -0.73], [0.134, -0.73], [0.134, -0.73], [0.134, -0.73], [0.134, -0.73], [0.134, -0.73], [0.134, -0.73], [0.134, -0.73], [0.135, -0.73], [0.135, -0.73], [0.135, -0.73], [0.135, -0.73], [0.135, -0.73], [0.135, -0.73], [0.135, -0.73], [0.135, -0.73], [0.135, -0.729], [0.136, -0.729], [0.136, -0.729], [0.136, -0.729], [0.136, -0.729], [0.136, -0.729], [0.136, -0.729], [0.136, -0.729], [0.136, -0.729], [0.137, -0.729], [0.137, -0.729], [0.137, -0.729], [0.137, -0.729], [0.137, -0.729], [0.137, -0.729], [0.137, -0.729], [0.137, -0.729], [0.138, -0.729], [0.138, -0.729], [0.138, -0.729], [0.138, -0.729], [0.138, -0.729], [0.138, -0.729], [0.138, -0.729], [0.138, -0.729], [0.139, -0.729], [0.139, -0.729], [0.139, -0.729], [0.139, -0.729], [0.139, -0.729], [0.139, -0.729], [0.139, -0.729], [0.139, -0.729], [0.14, -0.729], [0.14, -0.728], [0.14, -0.728], [0.14, -0.728], [0.14, -0.728], [0.14, -0.728], [0.14, -0.728], [0.14, -0.728], [0.141, -0.728], [0.141, -0.728], [0.141, -0.728], [0.141, -0.728], [0.141, -0.728], [0.141, -0.728], [0.141, -0.728], [0.142, -0.728], [0.142, -0.728], [0.142, -0.728], [0.142, -0.728], [0.142, -0.728], [0.142, -0.728], [0.142, -0.728], [0.143, -0.728], [0.143, -0.728], [0.143, -0.728], [0.143, -0.728], [0.143, -0.728], [0.143, -0.728], [0.143, -0.728], [0.144, -0.728]]};
+(function () {
+  const NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, text) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; }
+  const lin = (d0, d1, r0, r1) => v => r0 + (v - d0) / (d1 - d0) * (r1 - r0);
+  const mount = (id, svg) => document.getElementById(id).appendChild(svg);
+  const fills = { teacher: "var(--teacher)", dp: "var(--dp)", neg: "var(--neg)", soft: "var(--dp-soft)", ref: "var(--ref)" };
+  function bars(id, rows, opts) {   // rows: [label, value %, SE %, kind]
+    const W = 760, labelW = opts.labelW, rowH = opts.rowH, top = 4, axisH = 18;
+    const H = top + rows.length * rowH + axisH, plotW = W - labelW - 50, x = v => labelW + (v / 100) * plotW;
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": opts.aria });
+    [0, 25, 50, 75, 100].forEach(t => {
+      svg.appendChild(el("line", { x1: x(t), x2: x(t), y1: top - 2, y2: H - axisH + 2, stroke: "var(--line)", "stroke-width": 1 }));
+      svg.appendChild(el("text", { x: x(t), y: H - 4, "text-anchor": "middle", class: "tick" }, t + "%"));
+    });
+    rows.forEach(([label, v, se, kind], i) => {
+      const y = top + i * rowH, bh = Math.min(rowH * 0.56, opts.maxBar || 1e9), by = y + (rowH - bh) / 2;
+      svg.appendChild(el("text", { x: 0, y: y + rowH / 2 + 4, class: "lbl" }, label));
+      svg.appendChild(el("rect", { x: x(0), y: by, width: Math.max(1, x(v) - x(0)), height: bh, fill: fills[kind] }));
+      if (se) {
+        svg.appendChild(el("line", { x1: x(v - se), x2: x(v + se), y1: by + bh / 2, y2: by + bh / 2, stroke: "var(--ink)", "stroke-width": 1.2 }));
+        [v - se, v + se].forEach(e => svg.appendChild(el("line", { x1: x(e), x2: x(e), y1: by + bh / 2 - 4, y2: by + bh / 2 + 4, stroke: "var(--ink)", "stroke-width": 1.2 })));
+      }
+      svg.appendChild(el("text", { x: x(v + (se || 0)) + 5, y: by + bh / 2 + 4, "font-weight": 600 }, v.toFixed(1) + "%"));
+    });
+    mount(id, svg);
+  }
+  bars("chart-drawer", [
+    ["PPO teacher", 97.0, 1.21, "teacher"],
+    ["DP ← PPO teacher", 8.7, 1.15, "neg"],
+    ["Scripted teacher", 90.5, 2.07, "teacher"],
+    ["DP ← scripted teacher", 92.2, 1.10, "dp"],
+  ], { labelW: 160, rowH: 40, maxBar: 20, aria: "Drawer success: PPO teacher 97.0%, its DP 8.7%, scripted teacher 90.5%, its DP 92.2%" });
+  bars("chart-stack", [
+    ["Scripted teacher", 94.0, 2.37, "teacher"],
+    ["DP ← scripted teacher", 10.2, 1.23, "neg"],
+  ], { labelW: 160, rowH: 40, maxBar: 20, aria: "Stacking success: scripted teacher 94.0%, DP 10.2%" });
+
+  // DART yield: grouped bars per noise level
+  (function () {
+    const groups = [["no noise", [94.4, 93.3]], ["σ 0.01", [87.7, null]], ["σ 0.03", [4.2, 42.8]], ["σ 0.10", [0.0, null]]];
+    const W = 760, labelW = 70, bh = 13, gh = 2 * bh + 10, top = 4, axisH = 18, plotW = W - labelW - 40;
+    const H = top + groups.length * gh + axisH, x = v => labelW + v / 100 * plotW;
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Share of scripted-teacher rollouts that still succeed under DART noise: stacking 94.4, 87.7, 4.2, 0 percent at noise 0, 0.01, 0.03, 0.10; drawer 93.3 and 42.8 percent at 0 and 0.03" });
+    [0, 25, 50, 75, 100].forEach(t => {
+      svg.appendChild(el("line", { x1: x(t), x2: x(t), y1: top - 2, y2: H - axisH + 2, stroke: "var(--line)", "stroke-width": 1 }));
+      svg.appendChild(el("text", { x: x(t), y: H - 4, "text-anchor": "middle", class: "tick" }, t + "%"));
+    });
+    groups.forEach(([label, vals], g) => {
+      const y0 = top + g * gh + 3;
+      svg.appendChild(el("text", { x: 0, y: y0 + bh + 3, class: "lbl", "font-size": 12 }, label));
+      vals.forEach((v, k) => {
+        if (v === null) return;
+        const y = y0 + k * bh;
+        svg.appendChild(el("rect", { x: x(0), y: y + 1, width: Math.max(1.5, x(v) - x(0)), height: bh - 2, fill: k === 0 ? "var(--dp)" : "var(--teacher)" }));
+        svg.appendChild(el("text", { x: x(v) + 4, y: y + bh - 2, "font-size": 11.5, "font-weight": k === 0 ? 700 : 400, fill: k === 0 ? "var(--dp)" : "var(--muted)" }, (k === 0 ? "stack " : "drawer ") + v.toFixed(1) + "%"));
+      });
+    });
+    mount("chart-dart", svg);
+  })();
+
+  // Teacher action traces (one drawer demo each, joints 1 and 4)
+  (function () {
+    const W = 760, H = 262, L = 30, R = 8, T = 6, B = 30, rows = 2, gap = 12, ph = (H - T - B - gap) / rows;
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Normalised joint-1 and joint-4 targets over one drawer demo: the PPO teacher jumps between extremes, the scripted teacher moves smoothly" });
+    const sx = lin(0, 239, L, W - R), names = ["joint 1", "joint 4"];
+    [0, 1].forEach(j => {
+      const y0 = T + j * (ph + gap), sy = lin(-1.05, 0.75, y0 + ph, y0);
+      svg.appendChild(el("rect", { x: L, y: y0, width: W - R - L, height: ph, fill: "none", stroke: "var(--line)" }));
+      [-1, 0, 0.5].forEach(t => {
+        svg.appendChild(el("line", { x1: L, x2: W - R, y1: sy(t), y2: sy(t), stroke: "var(--line)", "stroke-width": .7 }));
+        svg.appendChild(el("text", { x: L - 4, y: sy(t) + 3, "text-anchor": "end", class: "tick" }, t));
+      });
+      [["ppo", "var(--teacher)", 1.3], ["scr", "var(--dp)", 2.4]].forEach(([k, c, w]) =>
+        svg.appendChild(el("path", { d: TR[k].map((r, i) => (i ? "L" : "M") + sx(i).toFixed(1) + " " + sy(r[j]).toFixed(1)).join(""), fill: "none", stroke: c, "stroke-width": w, "stroke-linejoin": "round" })));
+      svg.appendChild(el("text", { x: W - R - 4, y: y0 + 11, "text-anchor": "end", "font-size": 11.5, "font-weight": 600, fill: "var(--ink)" }, names[j]));
+    });
+    [0, 2, 4, 6, 8].forEach(t => svg.appendChild(el("text", { x: sx(t * 30), y: H - B + 12, "text-anchor": t === 8 ? "end" : "middle", class: "tick" }, t + " s")));
+    svg.appendChild(el("text", { x: L + (W - L - R) / 2, y: H - 4, "text-anchor": "middle", class: "tick" }, "time in episode"));
+    mount("c-trace", svg);
+  })();
+
+})();
+</script>
+<script src="shared.js"></script>

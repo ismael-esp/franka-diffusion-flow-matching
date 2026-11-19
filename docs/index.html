@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diffusion vs flow matching on a Franka arm</title>
+<meta name="description" content="Same network, same demonstrations: diffusion and flow-matching robot policies compared on lift, drawer, stacking and pouring in Isaac Lab, with the sampled action chunks animated over real rollouts. Held-out success rates, standard errors and caveats.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f5f7f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1820" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://ismael-esp.github.io/franka-diffusion-flow-matching/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Diffusion vs flow matching on a Franka arm">
+<meta property="og:description" content="Same network and data, two training objectives: success rates on lift, drawer, stacking and pouring, with the action sampling animated over real rollouts.">
+<meta property="og:url" content="https://ismael-esp.github.io/franka-diffusion-flow-matching/">
+<meta property="og:image" content="https://ismael-esp.github.io/franka-diffusion-flow-matching/assets/img/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Title card: diffusion vs flow matching on a Franka arm, with a frame from the sampling replay over a lift rollout.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Diffusion vs flow matching on a Franka arm">
+<meta name="twitter:description" content="Same network and data, two training objectives, four simulated manipulation tasks.">
+<meta name="twitter:image" content="https://ismael-esp.github.io/franka-diffusion-flow-matching/assets/img/og.png">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/img/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="preload" href="assets/fonts/archivo-latin-wdth-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/site.css">
+</head>
+<body id="top">
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-head">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Diffusion vs flow matching, top of page"><i>Diffusion</i> <span>vs</span> <b>flow</b></a>
+    <nav class="site-nav" aria-label="Sections">
+      <ul>
+        <li><a href="#summary">Summary</a></li>
+        <li><a href="#method">Method</a></li>
+        <li><a href="#convergence">Sampling replays</a></li>
+        <li><a href="#teacher">Teacher ceiling</a></li>
+        <li><a href="#steps">Few steps</a></li>
+        <li><a href="#features">What it looks at</a></li>
+        <li><a href="#limits">Limits</a></li>
+        <li><a href="#reproduce">Reproduce</a></li>
+      </ul>
+    </nav>
+    <a class="gh" href="https://github.com/ismael-esp/franka-diffusion-flow-matching">GitHub</a>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ================= HERO ================= -->
+<section class="hero" aria-labelledby="h-hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <h1 id="h-hero">Does flow matching beat diffusion at robot manipulation?</h1>
+        <p class="lede">Same network, data and recipe in Isaac Lab; only the training objective and the sampler differ. Flow matching is ahead on lift and on pouring at 5 steps, ties on the drawer, and shows no measurable difference on stacking.</p>
+        <div class="cta">
+          <a class="btn" href="https://github.com/ismael-esp/franka-diffusion-flow-matching">Code on GitHub</a>
+          <a class="btn alt" href="https://github.com/ismael-esp/franka-diffusion-flow-matching#readme">README</a>
+          <a class="btn alt" href="https://github.com/ismael-esp/franka-diffusion-flow-matching/blob/main/report/RESULTS.md">All tables (RESULTS.md)</a>
+        </div>
+      </div>
+      <figure class="clip hero-video">
+  <div class="media r169"><video controls preload="none" playsinline muted poster="assets/img/posters/results.jpg" width="1920" height="1080" data-big data-ctl data-dur="98.6" data-label="the 98-second results video"><source src="assets/video/results.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/results.mp4">Download it (8.3 MB)</a>.</p></video></div>
+  <figcaption><span class="cap-t">The results video, 98.6 s, silent</span>Question, teacher ceiling, stacking, flow against diffusion, the two models, sampling replays over real rollouts, few steps. <a class="full" href="assets/video/results.mp4" aria-label="Open results full size (MP4)">Open full size (MP4, 8.3 MB)</a></figcaption>
+</figure>
+    </div>
+    <ul class="keys" aria-label="Headline results">
+      <li class="key fm"><div class="n"><span class="from">62.8</span><span class="arr"> &rarr; </span>78.2<small> %</small></div><span class="w">Lift: diffusion to flow matching</span><p>+15 points over seeds 1001-1003 (3 &times; 200 episodes). Flow matching also reaches 66.0 % with a single Euler step (seed 1001).</p></li>
+      <li class="key fm"><div class="n"><span class="from">27.5</span><span class="arr"> &rarr; </span>57.0<small> %</small></div><span class="w">Pouring at 5 sampling steps</span><p>Flow at 5 steps matches diffusion at 50 steps (57.0 vs 51.5 %, within about 1 SE, one seed) with a tenth of the network calls. Task-stage success, no liquid measured.</p></li>
+      <li class="key tie"><div class="n">92.2 <span class="arr">vs</span> 92.3<small> %</small></div><span class="w">Drawer: a tie</span><p>Both match their scripted teacher (90.5 %). With a jerky PPO teacher the student reaches only 8.7 %.</p></li>
+      <li class="key neg"><div class="n">10.2 <span class="arr">vs</span> 7.3<small> %</small></div><span class="w">Stacking, demos only: no measurable difference</span><p>10.9 vs 9.3 % on seeds 1002-1005. DAgger round 2 lifts diffusion to 42.1 %; the teacher is at 94.0 %.</p></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================= SUMMARY ================= -->
+<section id="summary" aria-labelledby="h-summary">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="h-summary">What we found</h2>
+      <p>Success rates on held-out episodes. Each model is a single training run per task, so small gaps are not meaningful; the lift and 5-step pouring gaps are far outside the standard errors (the pouring gap may partly come from the diffusion sampler grid, see Few steps).</p>
+    </div>
+
+    <div class="sub">
+      <h3>Flow matching against diffusion, four tasks</h3>
+      <div class="split" style="margin-top:14px">
+        <div class="panel">
+          <div class="chart" data-chart="main" style="min-height:588px"></div>
+          <div class="legend"><span><i class="dp"></i>Diffusion (DDIM)</span><span><i class="fm"></i>Flow matching (Euler)</span><span><i class="dot"></i>one seed (200 episodes)</span><span>whisker: &plusmn;1 standard error, sqrt(p(1-p)/n) with n = 600 (pour 200); printed &plusmn; values are from RESULTS.md</span></div>
+        </div>
+        <div>
+          <div class="tablewrap" tabindex="0" role="region" aria-label="Success rates, diffusion and flow matching, table"><table>
+            
+            <thead><tr><th>Task</th><th class="num">Diffusion</th><th class="num">Flow matching</th><th>Reading</th></tr></thead>
+            <tbody>
+              <tr><td>Stacking, demos only<span class="sub2">10 steps, 3 &times; 200</span></td><td class="num">10.2 %<span class="sub2">8.0 / 9.0 / 13.5</span></td><td class="num">7.3 %<span class="sub2">6.0 / 10.0 / 6.0</span></td><td>both low; no measurable difference (10.9 vs 9.3 % on seeds 1002-1005)</td></tr>
+              <tr><td>Drawer<span class="sub2">10 steps, 3 &times; 200</span></td><td class="num">92.2 % &plusmn; 1.1</td><td class="num">92.3 %<span class="sub2">95.0 / 90.5 / 91.5</span></td><td>tie</td></tr>
+              <tr><td>Lift<span class="sub2">10 steps, 3 &times; 200</span></td><td class="num">62.8 %<span class="sub2">63.0 / 66.0 / 59.5</span></td><td class="num">78.2 %<span class="sub2">77.0 / 78.0 / 79.5</span></td><td>flow +15 points</td></tr>
+              <tr><td>Pouring<span class="sub2">5 steps, 200 episodes; task-stage success, no liquid measured</span></td><td class="num">27.5 %</td><td class="num">57.0 %</td><td>flow +29.5 points (diffusion 5-step grid starts at t = 80, see Few steps)</td></tr>
+              <tr><td>Pouring<span class="sub2">10 steps</span></td><td class="num">not measured</td><td class="num">50.0 %</td><td></td></tr>
+              <tr><td>Pouring<span class="sub2">50 steps</span></td><td class="num">51.5 %</td><td class="num">41.5 %</td><td>diffusion ahead at 50 steps (within about 1 SE)</td></tr>
+            </tbody></table></div>
+          <p class="scrollhint">Swipe the table sideways to see all columns.</p>
+          <p class="tnote">Success on held-out seeds, with the per-seed values under each pooled rate. SE = sqrt(p(1-p)/n). Source: report/RESULTS.md.</p>
+        </div>
+      </div>
+      <p class="small muted prose" style="margin-top:14px">Training: stacking, drawer and lift 30k steps from scratch each (lift: both objectives from scratch on the same zoom demos, so these lift numbers are lower than the earlier fine-tune-chain lift policies). Pouring flow: 80k steps on <code>demos_lag400</code> and <code>demos_lag800b</code>, the recipe of the diffusion <code>bc_lag1200</code>. The 27.5 % diffusion pouring number uses the checkpoint's own 5-step DDIM schedule; the evaluation file does not record it.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= METHOD ================= -->
+<section id="method" aria-labelledby="h-method">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="h-method">Two models, one backbone</h2>
+      <p>The policy reads two past frames (workspace and wrist camera) and the joint state, and writes a 16-step chunk of actions; the first 8 run, then it plans again. Both models use the same network code. They differ in what the network is trained to predict and in how a chunk is sampled.</p>
+    </div>
+
+    <ul class="keys" style="margin-bottom:36px">
+      <li class="key tie"><div class="n">17.5 M</div><span class="w">parameters</span><p>The same network for both objectives (Franka tasks).</p></li>
+      <li class="key fm"><div class="n"><span class="from">10</span><span class="arr"> &rarr; </span>5</div><span class="w">network calls per chunk</span><p>Lift, drawer, stacking: both models at 10 calls. Pouring: flow at 5 (57.0 %), diffusion at 50 (51.5 %). Flow reaches 66.0 % on lift with 1 call.</p></li>
+      <li class="key fm"><div class="n sm"><span class="from">0.0140</span><span class="arr"> &rarr; </span>0.0079</div><span class="w">held-out action error</span><p>Mean squared error of the sampled first 8 actions against held-out lift demos, best checkpoint of the lift pair (<code>dp_lift</code>, <code>fm_lift</code>, one run each): diffusion 0.0140, flow matching 0.0079.</p></li>
+      <li class="key tie"><div class="n"><span class="from">16</span><span class="arr"> &rarr; </span>8</div><span class="w">actions predicted, then executed</span><p>Two past frames in, 16 steps out, 8 run, then the policy plans again. Pouring: 32 predicted, 16 executed.</p></li>
+    </ul>
+
+    <div class="diag-row">
+      <div>
+        <h3 class="dp">Diffusion: predict the noise, sample with DDIM</h3>
+        <div class="diagram" style="margin-top:12px"><a href="assets/img/diagrams/architecture_diffusion.svg" aria-label="Open the diffusion architecture diagram full size (SVG)"><img src="assets/img/diagrams/architecture_diffusion.svg" width="760" height="396" alt="Diffusion policy architecture. Training: a demo chunk gets noise added at integer time t from 0 to 99, the shared network sees the noisy chunk, the observation tokens and t, and predicts the noise; the loss is the mean squared error to the noise. Sampling: start from noise, 10 DDIM steps with the network, then a clean chunk of which 8 actions run." loading="lazy" decoding="async"></a></div>
+        <p class="diag-hint">Grey boxes are the same code in both models; <span class="swatch d"></span>orange boxes differ. On a phone, scroll the diagram sideways or tap it to open it full size.</p>
+      </div>
+      <div class="diag-note">
+        <p><b>Training.</b> Add noise to a demo chunk at an integer time t in 0..99 (cosine schedule). The network predicts the noise; the loss is the mean squared error to it.</p>
+        <p><b>Sampling.</b> DDIM with eta 0 over t = 90, 80, &hellip;, 0 (10 network calls), with the x0 estimate clipped to &plusmn;1 at every step.</p>
+      </div>
+    </div>
+
+    <div class="diag-row" style="margin-top:44px">
+      <div>
+        <h3 class="fm">Flow matching: predict the velocity, sample with Euler</h3>
+        <div class="diagram" style="margin-top:12px"><a href="assets/img/diagrams/architecture_flow.svg" aria-label="Open the flow-matching architecture diagram full size (SVG)"><img src="assets/img/diagrams/architecture_flow.svg" width="760" height="396" alt="Flow-matching policy architecture. Training: a random time t between 0 and 1 blends noise and the demo chunk in a straight line; the shared network sees the blend, the observation tokens and t times 100, and predicts the velocity; the loss is the mean squared error to action minus noise. Sampling: start from noise, take k Euler steps along the predicted velocity, then a clean chunk of which 8 actions run." loading="lazy" decoding="async"></a></div>
+        <p class="diag-hint">Grey boxes are the same code in both models; <span class="swatch f"></span>teal boxes differ.</p>
+      </div>
+      <div class="diag-note">
+        <p><b>Training.</b> Draw t uniformly in (0, 1) and blend: x<sub>t</sub> = (1 &minus; t) &middot; noise + t &middot; action. The network predicts the velocity action &minus; noise. The time input is t &times; 100, a float.</p>
+        <p><b>Sampling.</b> Euler with k steps, x &larr; x + v/k at t = i/k, clamped to &plusmn;1 only at the end. Here t = 0 is noise; for diffusion, t = 99 is noise.</p>
+      </div>
+    </div>
+
+    <div class="sub">
+      <h3>What is shared and what is not</h3>
+      <div class="cols2" style="margin-top:14px">
+        <div class="panel" style="border-top:4px solid var(--teacher)">
+          <h3 class="h4">Literally shared code (<code>pouring_diffusion/dp_core/model.py</code>)</h3>
+          <ul class="bullets small">
+            <li>Image encoder: ResNet18 with GroupNorm, spatial softmax with 32 keypoints, Linear to 256 (lines 70-90).</li>
+            <li>Observation tokens: 2 past steps &times; (image, joints) = 4 tokens, plus 1 timestep token (157-164).</li>
+            <li>Transformer: encoder 2 layers, decoder 4 layers, 4 heads, width 256, with the Linear 256 &rarr; 8 head (93-125).</li>
+            <li>Data, optimiser (AdamW, learning rate 1e-4, 500 warm-up steps, cosine decay), EMA 0.999, checkpoint format (<code>train_dp.py</code>); 30,000 steps, batch 128, identical for both.</li>
+          </ul>
+        </div>
+        <div class="panel" style="border-top:4px solid var(--ink)">
+          <h3 class="h4">Not shared</h3>
+          <ul class="bullets small">
+            <li><code>FlowPolicy</code> is a subclass of <code>DiffusionPolicy</code> that overrides only two methods: the loss and the sampler (<code>pouring_diffusion/dp_core/flow.py</code> 19-35 against <code>model.py</code> 166-198).</li>
+            <li>What the time input means: an integer 0 to 99 where 99 is noise, against t &times; 100 with t = 0 as noise.</li>
+            <li>The noise schedule: cosine alphas against a linear blend (a flow checkpoint still stores the unused alpha table).</li>
+            <li>The head, the normalisation and the optimiser are identical.</li>
+          </ul>
+        </div>
+      </div>
+      <details>
+        <summary>Sizes and settings, read from code and checkpoints</summary>
+        <div class="tablewrap" tabindex="0" role="region" aria-label="Network sizes and settings, table" style="margin-top:6px"><table>
+          <thead><tr><th>Item</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>Image per step</td><td>workspace and wrist cameras, 128 &times; 128 each, side by side (128 &times; 256)</td></tr>
+            <tr><td>Joint state</td><td>18 numbers (drawer), 21 (lift); normalised, clipped to &plusmn;5, Linear to 256</td></tr>
+            <tr><td>Timestep embedding</td><td>sinusoidal 256, MLP 256 &rarr; 1024 &rarr; 256 (Mish)</td></tr>
+            <tr><td>Transformer</td><td>pre-norm, GELU, feed-forward 1024, dropout 0; the decoder self-attends over 16 action tokens and cross-attends to the memory</td></tr>
+            <tr><td>Chunk</td><td>predict 16 steps &times; 8 values, execute the first 8</td></tr>
+            <tr><td>Diffusion</td><td>100 training timesteps, cosine schedule, noise prediction, MSE; DDIM eta 0, 10 sampling steps, x0 clipped</td></tr>
+            <tr><td>Flow matching</td><td>x<sub>t</sub> = (1 &minus; t) noise + t action, t ~ U(0,1), velocity target action &minus; noise, MSE; Euler with k steps, clamp to &plusmn;1</td></tr>
+            <tr><td>Training</td><td>AdamW lr 1e-4, 500 warm-up steps then cosine decay, weight decay 1e-4, batch 128, grad clip 1.0, bf16, EMA 0.999, 30,000 steps (pouring 80,000)</td></tr>
+            <tr><td>Pouring variant</td><td>same code, two arms (7 + 7 action values), 32 steps predicted, 16 executed, 5 sampling steps</td></tr>
+          </tbody></table></div>
+      </details>
+    </div>
+
+    <div class="sub">
+      <h3>How each model learns</h3>
+      <p class="prose muted">The five small plots in each diagram use a real demo chunk (the gripper command of drawer demo episode 0, steps 75 to 90) corrupted with the real cosine schedule (alpha = 1.00, 0.84, 0.48, 0.13, 0.00 at t = 0, 25, 50, 75, 99) or with the straight flow blend and one seeded noise draw. The sampling-path plots are <b>schematic</b>: one action coordinate and a perfect network.</p>
+      <div class="diag-row" style="margin-top:14px">
+        <div>
+          <h3 class="h4 dp" style="margin-bottom:10px">Diffusion</h3>
+          <div class="diagram"><a href="assets/img/diagrams/learning_diffusion.svg" aria-label="Open the diffusion learning diagram full size (SVG)"><img src="assets/img/diagrams/learning_diffusion.svg" width="745" height="500" alt="How diffusion learns. Five copies of a real demo chunk with increasing noise, the denoising path on the DDIM grid from t = 90 to 0, and the training loop." loading="lazy" decoding="async"></a></div>
+        </div>
+        <div class="diag-note">
+          <p>Highest for diffusion: drawer 92.2 % (10 steps), pouring 51.5 % (50 steps).</p>
+        </div>
+      </div>
+      <div class="diag-row" style="margin-top:32px">
+        <div>
+          <h3 class="h4 fm" style="margin-bottom:10px">Flow matching</h3>
+          <div class="diagram"><a href="assets/img/diagrams/learning_flow.svg" aria-label="Open the flow-matching learning diagram full size (SVG)"><img src="assets/img/diagrams/learning_flow.svg" width="745" height="500" alt="How flow matching learns. Five straight blends between noise and a real demo chunk, the straight sampling path in Euler steps, and the training loop." loading="lazy" decoding="async"></a></div>
+        </div>
+        <div class="diag-note">
+          <p>Highest for flow matching: pouring 57.0 % (5 steps; 50.0 % at 10, within noise), lift 78.2 % (10 steps).</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CONVERGENCE ================= -->
+<section id="convergence" aria-labelledby="h-conv">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="h-conv">Watching a chunk get sampled, over a real rollout</h2>
+      <p>One clip per task, diffusion attempts first, then flow matching. Each attempt plays the real rollout, pauses once at a policy call, and replays the sampling steps of 32 noise draws before it continues to success.</p>
+    </div>
+
+    <div class="cols2">
+      <div class="panel">
+        <h3 class="h4">What the lines and arrows are</h3>
+        <ul class="bullets small">
+          <li>Every line is a <b>gripper path from the simulator</b>: the recorded robot and task objects are restored, one sampled 16-step chunk is applied for 16 steps, and the gripper path is projected into the task's video camera. There are 32 noise seeds per policy call; the executed sample is the thick line.</li>
+          <li>For diffusion the colour runs from noise (t = 90) to clean (t = 0). For flow matching the arrows show how the path moves per Euler step (length = 4 &times; one step) and the lines are the flow lines; the thick white line is the one that runs.</li>
+          <li>Markers: yellow square = the object the replay aims at (cube, handle, cube 2); white cross = the task goal; ring = the gripper.</li>
+          <li>Each attempt is cut 1 s after the task succeeds.</li>
+        </ul>
+      </div>
+      <div class="panel warn">
+        <h3 class="h4">Read these clips with three caveats</h3>
+        <ul class="bullets small">
+          <li><b>Short horizon.</b> A chunk is 16 steps: 0.32 s on lift, 0.53 s on drawer, 0.80 s on stack. It ends part-way to the marker (0.3 to 5 cm from it at the replay), never at the target 13 to 31 cm away.</li>
+          <li><b>Smoothed for display.</b> The curves are Catmull-Rom splines through the real 16 points. The data are not smoothed, and the video says so.</li>
+          <li><b>Smaller than raw targets.</b> The arm low-passes its targets (joint PD controller, gravity), so the simulator paths of noisy early samples stay within a few cm of the gripper. The visible convergence is smaller than a plot of raw joint targets would show.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="prose small muted" style="margin-top:16px">The replay call is chosen by one rule for lift, drawer and stack, all models and attempts: among the calls that start at or before the first open-to-closed gripper command, the one whose predicted 16-step chunk end is closest to the marker. Pour uses a different rule (below). Check on the drawing: re-simulating the executed chunk from the restored state reproduces the recorded fingertip path to 0.02-0.10 px on drawer, stack and lift (this tests the restore, not unexecuted chunks).</p>
+
+    
+<article class="task" id="lift" aria-labelledby="lift-h">
+  <div class="task-head"><h3 id="lift-h">Lift</h3><p>Pick up the cube and carry it to the goal. Franka Panda, 50 Hz.</p></div>
+  <figure class="clip"><div class="media r169"><video controls muted playsinline loop preload="none" poster="assets/img/posters/task_lift_converge.jpg" width="1920" height="1080" data-label="Lift: diffusion attempts, then flow-matching attempts, with the sampled chunks drawn over the rollout" data-dur="25.3" data-autoplay data-ctl><source src="assets/video/task_lift_converge.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/task_lift_converge.mp4">Download it (4.4 MB)</a>.</p></video></div>
+    <figcaption>Lift: diffusion attempts, then flow-matching attempts, with the sampled chunks drawn over the rollout <a class="full" href="assets/video/task_lift_converge.mp4" aria-label="Open task lift converge full size (MP4)">Open full size (MP4, 4.4 MB)</a> <span class="mnote">On a phone, rotate the screen or open it full size: the burned-in legends are small.</span></figcaption></figure>
+  <div class="task-meta">
+    <div class="panel"><h3 class="h4">Models and checkpoints</h3><div class="model-line"><span class="big dp">62.8 %</span><span><b class="dp">Diffusion</b>, <code>runs/flow/dp_lift/bc_best.pt</code></span></div><div class="model-line" style="margin-top:8px"><span class="big fm">78.2 %</span><span><b class="fm">Flow matching</b>, <code>runs/flow/fm_lift/bc_best.pt</code></span></div><p class="small muted" style="margin:10px 0 0">Held-out rates, 3 &times; 200 episodes (seeds 1001-1003). Both trained from scratch on the same zoom demos, 10 sampling steps, 16-step chunks, first 8 executed.</p></div>
+    <div class="panel"><h3 class="h4">What was recorded</h3><dl class="spec"><dt>Recording</dt><dd><code>record_denoise.py</code>, seed 41, 8 envs: diffusion 5/8, flow 8/8 succeed</dd><dt>Shown</dt><dd>env 4 and env 6, diffusion then flow: the same two start states, all four attempts succeed (25.3 s)</dd><dt>Replay call</dt><dd>env 4: call 2 (env step 8); env 6: call 3 (step 16)</dd><dt>Chunk</dt><dd>16 steps = 0.32 s at 50 Hz</dd><dt>Chunk end to cube</dt><dd>diffusion 5.1 / 2.4 cm, flow 4.7 / 1.9 cm (env 4 / env 6)</dd><dt>Chunk end to goal</dt><dd>26.7-31.4 cm: the chunk ends part-way, never at the goal</dd><dt>Spread of 32 end points</dt><dd>diffusion 19 / 28 mm, flow 14 / 25 mm</dd></dl></div>
+  </div>
+  
+  
+</article>
+    
+<article class="task" id="drawer" aria-labelledby="drawer-h">
+  <div class="task-head"><h3 id="drawer-h">Drawer</h3><p>Open the top drawer by at least 0.30 m. Franka Panda, 30 Hz.</p></div>
+  <figure class="clip"><div class="media r169"><video controls muted playsinline loop preload="none" poster="assets/img/posters/task_drawer_converge.jpg" width="1920" height="1080" data-label="Drawer: diffusion attempts, then flow-matching attempts, with the sampled chunks drawn over the rollout" data-dur="24.8" data-autoplay data-ctl><source src="assets/video/task_drawer_converge.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/task_drawer_converge.mp4">Download it (3.7 MB)</a>.</p></video></div>
+    <figcaption>Drawer: diffusion attempts, then flow-matching attempts, with the sampled chunks drawn over the rollout <a class="full" href="assets/video/task_drawer_converge.mp4" aria-label="Open task drawer converge full size (MP4)">Open full size (MP4, 3.7 MB)</a> <span class="mnote">On a phone, rotate the screen or open it full size: the burned-in legends are small.</span></figcaption></figure>
+  <div class="task-meta">
+    <div class="panel"><h3 class="h4">Models and checkpoints</h3><div class="model-line"><span class="big dp">92.2 %</span><span><b class="dp">Diffusion</b>, <code>runs/drawer_s/dp/bc_best.pt</code></span></div><div class="model-line" style="margin-top:8px"><span class="big fm">92.3 %</span><span><b class="fm">Flow matching</b>, <code>runs/flow/fm_drawer/bc_best.pt</code></span></div><p class="small muted" style="margin:10px 0 0">Both students of the scripted teacher, 600 episodes each, 10 sampling steps. A tie within the standard errors. Same training recipe: the two <code>command.json</code> files show <code>train_dp.py</code> with the same two datasets (<code>demos_clean</code>, <code>demos_dart03</code>), 30,000 steps and bf16; only <code>--objective</code> differs.</p></div>
+    <div class="panel"><h3 class="h4">What was recorded</h3><dl class="spec"><dt>Recording</dt><dd><code>record_task.py</code>, seed 41, 12 envs: diffusion 10/12, flow 12/12 succeed</dd><dt>Shown</dt><dd>env 0 and env 4 (cabinet y +0.076 m and -0.095 m), same two cabinet poses for both models, all succeed (24.8 s)</dd><dt>Replay call</dt><dd>diffusion call 10 (step 72) and 11 (80); flow call 9 (64) and 12 (88)</dd><dt>Chunk</dt><dd>16 steps = 0.53 s at 30 Hz</dd><dt>Chunk end to handle</dt><dd>0.3 cm for both diffusion attempts; flow 0.7 / 0.3 cm</dd><dt>Chunk end to open target</dt><dd>29.8-30.5 cm</dd><dt>Spread of 32 end points</dt><dd>1.4-2.9 mm</dd></dl></div>
+  </div>
+  <p class="prose small muted" style="margin:0">On the drawer the arm is already close to the handle at the replay call, so the 32 paths are tight for both models.</p>
+  
+</article>
+    
+<article class="task" id="stack" aria-labelledby="stack-h">
+  <div class="task-head"><h3 id="stack-h">Stack</h3><p>Stack three cubes. Franka Panda, 20 Hz.</p></div>
+  <figure class="clip"><div class="media r169"><video controls muted playsinline loop preload="none" poster="assets/img/posters/task_stack_converge.jpg" width="1920" height="1080" data-label="Stack: DAgger-corrected diffusion vs demos-only flow; flow successes searched in 32 envs; different start states" data-dur="24.4" data-autoplay data-ctl><source src="assets/video/task_stack_converge.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/task_stack_converge.mp4">Download it (5.2 MB)</a>.</p></video></div>
+    <figcaption>Stack: DAgger-corrected diffusion vs demos-only flow; flow successes searched in 32 envs; different start states <a class="full" href="assets/video/task_stack_converge.mp4" aria-label="Open task stack converge full size (MP4)">Open full size (MP4, 5.2 MB)</a> <span class="mnote">On a phone, rotate the screen or open it full size: the burned-in legends are small.</span></figcaption></figure>
+  <div class="task-meta">
+    <div class="panel"><h3 class="h4">Models and checkpoints</h3><div class="model-line"><span class="big dp">42.1 %</span><span><b class="dp">Diffusion, DAgger round 2</b>, <code>runs/stack/dp_dagger2/bc_best.pt</code> (seeds 1002-1005)</span></div><div class="model-line" style="margin-top:8px"><span class="big fm">7.3 %</span><span><b class="fm">Flow matching, demos only</b>, <code>runs/flow/fm_stack/bc_best.pt</code></span></div><p class="small muted" style="margin:10px 0 0">The two models are not equals: the diffusion policy is the DAgger-corrected one. Demos-only: diffusion 10.2 %, flow 7.3 % (seeds 1001-1003); diffusion 10.9 %, flow 9.3 % (seeds 1002-1005): no measurable difference.</p></div>
+    <div class="panel"><h3 class="h4">What was recorded</h3><dl class="spec"><dt>Recording</dt><dd><code>record_task.py</code>, seeds 41 and 42, 16 envs each (32 envs): diffusion 5/16 and 8/16, flow 1/16 and 1/16</dd><dt>Shown</dt><dd>diffusion batch 0 env 10 and batch 1 env 12; flow batch 0 env 8 and batch 1 env 6 (24.4 s)</dd><dt>Replay call</dt><dd>diffusion call 4 (step 24) twice; flow call 5 (32) and call 4 (24)</dd><dt>Chunk</dt><dd>16 steps = 0.80 s at 20 Hz</dd><dt>Chunk end to cube 2</dt><dd>diffusion 1.4 / 1.4 cm, flow 2.1 / 0.5 cm</dd><dt>Chunk end to target</dt><dd>13.2-17.6 cm</dd><dt>Spread of 32 end points</dt><dd>diffusion 8.7 / 6.1 mm, flow 2.1 / 2.9 mm</dd></dl></div>
+  </div>
+  
+  <div class="callout"><b>Caveat.</b> Flow matching needed 32 environments to give two successes, so its two attempts were <b>searched for</b>. There was no environment in which both models succeeded; the diffusion attempts were picked to have a similar cube 2 start ((0.511, 0.087) and (0.584, -0.059) m against (0.568, 0.099) and (0.592, -0.066) m for flow) but they are different states. The shown attempts are not typical for flow on this task.</div>
+</article>
+    
+<article class="task" id="pour" aria-labelledby="pour-h">
+  <div class="task-head"><h3 id="pour-h">Pour</h3><p>Two UR3 arms with Allegro hands pour from a bottle into a cup. 60 Hz.</p></div>
+  <figure class="clip"><div class="media r169"><video controls muted playsinline loop preload="none" poster="assets/img/posters/task_pour_converge.jpg" width="1920" height="1080" data-label="Pour: one diffusion attempt, then one flow-matching attempt, same start state (task-stage success, no liquid measured)" data-dur="22.0" data-autoplay data-ctl><source src="assets/video/task_pour_converge.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/task_pour_converge.mp4">Download it (3.4 MB)</a>.</p></video></div>
+    <figcaption>Pour: one diffusion attempt, then one flow-matching attempt, same start state (task-stage success, no liquid measured) <a class="full" href="assets/video/task_pour_converge.mp4" aria-label="Open task pour converge full size (MP4)">Open full size (MP4, 3.4 MB)</a> <span class="mnote">On a phone, rotate the screen or open it full size: the burned-in legends are small.</span></figcaption></figure>
+  <div class="task-meta">
+    <div class="panel"><h3 class="h4">Models and checkpoints</h3><div class="model-line"><span class="big dp">51.5 %</span><span><b class="dp">Diffusion</b>, <code>bc_lag1200</code>, 50 DDIM steps (10 of the 50 states are shown)</span></div><div class="model-line" style="margin-top:8px"><span class="big fm">57.0 %</span><span><b class="fm">Flow matching</b>, <code>fm_lag1200</code>, 5 Euler steps</span></div><p class="small muted" style="margin:10px 0 0">Seed 201, 200 episodes; task-stage success, no liquid measured. Diffusion at 5 steps is 27.5 % (its 5-step DDIM grid starts at t = 80). Flow at 5 steps vs diffusion at 50: 57.0 vs 51.5 %, within about 1 SE.</p></div>
+    <div class="panel"><h3 class="h4">What was recorded</h3><dl class="spec"><dt>Recording</dt><dd>seed 201, 4 envs per model; diffusion succeeded in envs 0 and 2, flow in envs 2 and 3</dd><dt>Shown</dt><dd>env 2 for both: identical cup and bottle start poses, both succeed (22.0 s)</dd><dt>Replay call</dt><dd>call 14 (env step 208) for both: the call that contains the start of the tilt</dd><dt>Chunk</dt><dd>32 steps predicted, 16 executed = 0.27 s at 60 Hz</dd><dt>Mouth to cup opening</dt><dd>now 24.5 cm (diffusion) / 20.5 cm (flow); chunk end 16.1 / 12.6 cm</dd><dt>Spread of 32 end points</dt><dd>diffusion 34 mm (noise) to 1.6 mm (final); flow 36 mm to 2.3 mm: unimodal at this call (n = 32, one env)</dd></dl></div>
+  </div>
+  <p class="prose small muted" style="margin:0">Different from the other three: this simulator has no water, the lines are the bottle-mouth path, and the replay rule differs.</p>
+  <div class="callout"><b>Caveat.</b> There is <b>no water measure</b>. Success is <code>subgoal &ge; 9</code>: the pour stage is done, both objects are placed down and released, and both hands retreat. The drawn lines are the bottle-mouth path (the env's pour point, carried by the right hand) of each sampled chunk, as the simulator produces it; the yellow square is the cup opening and the green shape is the env's pour region. Early noisy sampler states snap the grip, so in those lines the bottle can drop. The flow clip has no velocity arrows or field.</div>
+</article>
+
+    <details style="margin-top:40px">
+      <summary>More lift views: several replays per attempt, and one replay per attempt</summary>
+      <p class="prose small muted">The same two lift checkpoints, cut differently. The longer cuts replay several policy calls per attempt; the shorter ones replay one. Details per file: <code>report/media/README_task_videos.md</code> in the repository.</p>
+      <div class="grid-clips g2"><figure class="clip"><div class="media" style="aspect-ratio:1920/1080"><video controls muted playsinline loop preload="none" poster="assets/img/posters/diffusion_converge.jpg" width="1920" height="1080" data-label="Lift diffusion with several replays per attempt" data-dur="18.6" data-autoplay><source src="assets/video/diffusion_converge.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/diffusion_converge.mp4">Download it (3.1 MB)</a>.</p></video></div><figcaption><span class="cap-t">Lift, diffusion, several replays per attempt</span>Two attempts, each paused several times to replay the sampling of one policy call (18.6 s). <a class="full" href="assets/video/diffusion_converge.mp4" aria-label="Open diffusion converge full size (MP4)">Open full size (MP4, 3.1 MB)</a></figcaption></figure><figure class="clip"><div class="media" style="aspect-ratio:1920/1080"><video controls muted playsinline loop preload="none" poster="assets/img/posters/flow_integrate.jpg" width="1920" height="1080" data-label="Lift flow matching with several replays per attempt" data-dur="17.1" data-autoplay><source src="assets/video/flow_integrate.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/flow_integrate.mp4">Download it (3.1 MB)</a>.</p></video></div><figcaption><span class="cap-t">Lift, flow matching, several replays per attempt</span>Two attempts; the arrows show how the gripper path moves per Euler step (17.1 s). <a class="full" href="assets/video/flow_integrate.mp4" aria-label="Open flow integrate full size (MP4)">Open full size (MP4, 3.1 MB)</a></figcaption></figure><figure class="clip"><div class="media" style="aspect-ratio:1920/1080"><video controls muted playsinline loop preload="none" poster="assets/img/posters/diffusion_converge_single.jpg" width="1920" height="1080" data-label="Lift diffusion with one replay per attempt" data-dur="12.5" data-autoplay><source src="assets/video/diffusion_converge_single.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/diffusion_converge_single.mp4">Download it (2.0 MB)</a>.</p></video></div><figcaption><span class="cap-t">Lift, diffusion, one replay per attempt</span>The shorter cut (12.5 s). <a class="full" href="assets/video/diffusion_converge_single.mp4" aria-label="Open diffusion converge single full size (MP4)">Open full size (MP4, 2.0 MB)</a></figcaption></figure><figure class="clip"><div class="media" style="aspect-ratio:1920/1080"><video controls muted playsinline loop preload="none" poster="assets/img/posters/flow_integrate_single.jpg" width="1920" height="1080" data-label="Lift flow matching with one replay per attempt" data-dur="12.8" data-autoplay><source src="assets/video/flow_integrate_single.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/flow_integrate_single.mp4">Download it (2.1 MB)</a>.</p></video></div><figcaption><span class="cap-t">Lift, flow matching, one replay per attempt</span>The shorter cut (12.8 s). <a class="full" href="assets/video/flow_integrate_single.mp4" aria-label="Open flow integrate single full size (MP4)">Open full size (MP4, 2.1 MB)</a></figcaption></figure></div>
+    </details>
+  </div>
+</section>
+
+<!-- ================= TEACHER CEILING ================= -->
+<section id="teacher" aria-labelledby="h-teacher">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="h-teacher">The teacher bounds the student; stacking stays far below it</h2>
+      <p>On the drawer a smoother teacher fixes everything and the student reaches the teacher. On stacking, correcting the student's own mistakes (DAgger) helps but does not close the gap. The likely reason, hard-to-fit teacher labels on student states, is a hypothesis that was not tested.</p>
+    </div>
+
+    <h3>Drawer: same network, different teacher</h3>
+    <div class="cols2" style="margin-top:14px;align-items:start">
+      <div class="panel">
+        <div class="chart" data-chart="drawer" style="min-height:243px"></div>
+        <div class="legend"><span><i class="t"></i>teacher</span><span><i class="neg"></i>student, PPO teacher</span><span><i class="dp"></i>diffusion</span><span><i class="fm"></i>flow matching</span><span>whisker: &plusmn;1 standard error</span></div>
+        <p class="small muted" style="margin:8px 0 0">Students: 600 held-out episodes each. Scripted teacher: 200 episodes (GPU eval).</p>
+      </div>
+      <div class="prose">
+        <p>The PPO teacher's actions are about 25 times rougher than the scripted teacher's: the mean step-to-step change is 0.061 against 0.0024 (normalised joint targets). The student cannot copy that, and reaches 8.7 %. With the scripted teacher the student matches it: 92.2 % against the teacher's 90.5 %, and flow matching gives 92.3 %.</p>
+        <p>DAgger was <b>not</b> tried on the drawer: the scripted drawer teacher has no resync mode and was not checked for sensible labels on states the student visits. Earlier attempts to fix that teacher (posture term, homing, translate-first) gave no real gain.</p>
+      </div>
+    </div>
+    <div style="margin-top:24px"><figure class="clip"><div class="media" style="aspect-ratio:1280/320"><video controls muted playsinline loop preload="none" poster="assets/img/posters/drawer_ppo_failures.jpg" width="1280" height="320" data-label="Drawer student of the PPO teacher, failing rollouts" data-dur="8.0" data-autoplay><source src="assets/video/drawer_ppo_failures.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/drawer_ppo_failures.mp4">Download it (0.4 MB)</a>.</p></video></div><figcaption><span class="cap-t">Diffusion student of the PPO teacher</span>Three rollouts that fail. The held-out success of this student is 8.7 % &plusmn; 1.2 (600 episodes); its PPO teacher succeeds 97.0 % &plusmn; 1.2. <a class="full" href="assets/video/drawer_ppo_failures.mp4" aria-label="Open drawer ppo failures full size (MP4)">Open full size (MP4, 0.4 MB)</a></figcaption></figure></div>
+    <div style="margin-top:28px"><div class="grid-clips g3"><figure class="clip"><div class="media" style="aspect-ratio:640/488"><video controls muted playsinline loop preload="none" poster="assets/img/posters/drawer_teacher_2x2.jpg" width="640" height="488" data-label="Drawer scripted teacher, four episodes" data-dur="8.0" data-autoplay><source src="assets/video/drawer_teacher_2x2.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/drawer_teacher_2x2.mp4">Download it (0.2 MB)</a>.</p></video></div><figcaption><span class="cap-t">Scripted teacher</span>Four episodes. Teacher success 90.5 % &plusmn; 2.1 (200 episodes, GPU eval). <a class="full" href="assets/video/drawer_teacher_2x2.mp4" aria-label="Open drawer teacher 2x2 full size (MP4)">Open full size (MP4, 0.2 MB)</a></figcaption></figure><figure class="clip"><div class="media" style="aspect-ratio:640/488"><video controls muted playsinline loop preload="none" poster="assets/img/posters/drawer_dp_2x2.jpg" width="640" height="488" data-label="Drawer diffusion student of the scripted teacher, four episodes" data-dur="8.0" data-autoplay><source src="assets/video/drawer_dp_2x2.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/drawer_dp_2x2.mp4">Download it (0.2 MB)</a>.</p></video></div><figcaption><span class="cap-t">Diffusion student</span>Four episodes. 92.2 % &plusmn; 1.1 over 600 held-out episodes. <a class="full" href="assets/video/drawer_dp_2x2.mp4" aria-label="Open drawer dp 2x2 full size (MP4)">Open full size (MP4, 0.2 MB)</a></figcaption></figure><figure class="clip"><div class="media" style="aspect-ratio:640/488"><video controls muted playsinline loop preload="none" poster="assets/img/posters/fm_drawer_2x2.jpg" width="640" height="488" data-label="Drawer flow-matching student, four episodes" data-dur="8.0" data-autoplay><source src="assets/video/fm_drawer_2x2.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/fm_drawer_2x2.mp4">Download it (0.2 MB)</a>.</p></video></div><figcaption><span class="cap-t">Flow-matching student</span>Five sampling steps, 3 of 4 shown succeed. Held-out rate 92.3 % (10 steps), not the rate of these four. <a class="full" href="assets/video/fm_drawer_2x2.mp4" aria-label="Open fm drawer 2x2 full size (MP4)">Open full size (MP4, 0.2 MB)</a></figcaption></figure></div></div>
+
+    <div class="sub">
+      <h3>Stacking: DAgger helps, from-scratch training on it fails</h3>
+      <div class="prose" style="margin-top:8px">
+        <p>DAgger: the student drives, the scripted teacher (in resync mode, its phase re-derived from the scene) labels every visited state, and the student is fine-tuned on all data so far (15k steps per round, starting from the previous model). Held-out seeds 1002-1005, 4 &times; 200 = 800 episodes, idle GPU, 50 parallel envs. Seed 1001 was used only to pick models.</p>
+      </div>
+      <div class="cols2" style="margin-top:18px;align-items:start">
+        <div class="panel">
+          <h3 class="h4 chart-title">Success, held-out seeds 1002-1005</h3>
+          <div class="chart" data-chart="dagger" style="min-height:415px"></div>
+          <div class="legend"><span><i class="t"></i>teacher</span><span><i class="dp"></i>diffusion</span><span><i class="fm"></i>flow matching</span><span>whisker: &plusmn;1 standard error</span></div>
+        </div>
+        <div class="panel">
+          <h3 class="h4 chart-title">Outcomes over the 800 episodes</h3>
+          <div class="chart" data-chart="outcomes" style="min-height:326px"></div>
+          <div class="legend"><span><i class="ok"></i>both stacks done (success)</span><span><i class="mid"></i>one stacked</span><span><i style="background:var(--soft);outline:1px solid var(--line);outline-offset:-1px"></i>none stacked</span></div>
+          <h3 class="h4 chart-title" style="margin-top:22px">Best validation action error</h3>
+          <div class="chart" data-chart="mse" style="min-height:286px"></div>
+          <p class="small muted" style="margin:6px 0 0">Each run on its own validation split. Round 4 data: 0.0287 (flow) and 0.0316 (diffusion) on a different mix.</p>
+        </div>
+      </div>
+      <div class="cols2" style="margin-top:20px">
+        <div class="prose">
+          <p><b>Reading.</b> DAgger round 2 is 4 times the demos-only student (42.1 % against 10.9 %), but still far below the 94.0 % teacher. Round 3 degrades to 23.1 %. Training from scratch on all the DAgger data failed for both objectives (about 2 %), and the validation error rises as DAgger data is added. Flow matching did not help stacking: the limit is the data and labels, not the objective.</p>
+        </div>
+        <div class="callout info"><b>Hypothesis, not tested.</b> The teacher labels on student-visited states may be harder to fit (noisier or more multimodal) than demo states; 30k steps may also simply be too few for the mixed data. The fine-tune chain probably works in round 2 because it keeps the demo behaviour and corrects only part of it, but round 3 then degrades.</div>
+      </div>
+      <div style="margin-top:28px"><div class="grid-clips g4"><figure class="clip"><div class="media" style="aspect-ratio:640/488"><video controls muted playsinline loop preload="none" poster="assets/img/posters/stack_teacher_2x2.jpg" width="640" height="488" data-label="Stacking scripted teacher, four episodes" data-dur="10.0" data-autoplay><source src="assets/video/stack_teacher_2x2.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/stack_teacher_2x2.mp4">Download it (0.3 MB)</a>.</p></video></div><figcaption><span class="cap-t">Scripted teacher</span>Four episodes. 94.0 % &plusmn; 2.4 (100 episodes). <a class="full" href="assets/video/stack_teacher_2x2.mp4" aria-label="Open stack teacher 2x2 full size (MP4)">Open full size (MP4, 0.3 MB)</a></figcaption></figure><figure class="clip"><div class="media" style="aspect-ratio:640/488"><video controls muted playsinline loop preload="none" poster="assets/img/posters/stack_dp_2x2.jpg" width="640" height="488" data-label="Stacking diffusion demos only, four episodes" data-dur="10.0" data-autoplay><source src="assets/video/stack_dp_2x2.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/stack_dp_2x2.mp4">Download it (0.3 MB)</a>.</p></video></div><figcaption><span class="cap-t">Diffusion, demos only</span>Four episodes. 10.9 % &plusmn; 1.1 (seeds 1002-1005; 10.2 % on seeds 1001-1003). <a class="full" href="assets/video/stack_dp_2x2.mp4" aria-label="Open stack dp 2x2 full size (MP4)">Open full size (MP4, 0.3 MB)</a></figcaption></figure><figure class="clip"><div class="media" style="aspect-ratio:640/488"><video controls muted playsinline loop preload="none" poster="assets/img/posters/stack_dagger_2x2.jpg" width="640" height="488" data-label="Stacking diffusion with DAgger round 2, four episodes" data-dur="10.0" data-autoplay><source src="assets/video/stack_dagger_2x2.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/stack_dagger_2x2.mp4">Download it (0.3 MB)</a>.</p></video></div><figcaption><span class="cap-t">Diffusion, DAgger round 2</span>Four episodes. 42.1 % &plusmn; 1.7 (seeds 1002-1005). <a class="full" href="assets/video/stack_dagger_2x2.mp4" aria-label="Open stack dagger 2x2 full size (MP4)">Open full size (MP4, 0.3 MB)</a></figcaption></figure><figure class="clip"><div class="media" style="aspect-ratio:640/488"><video controls muted playsinline loop preload="none" poster="assets/img/posters/fm_stack_2x2.jpg" width="640" height="488" data-label="Stacking flow matching demos only, four episodes" data-dur="10.0" data-autoplay><source src="assets/video/fm_stack_2x2.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/fm_stack_2x2.mp4">Download it (0.3 MB)</a>.</p></video></div><figcaption><span class="cap-t">Flow matching, demos only</span>Five sampling steps, 1 of 4 shown succeeds. Held-out rate 7.3 % (10 steps). <a class="full" href="assets/video/fm_stack_2x2.mp4" aria-label="Open fm stack 2x2 full size (MP4)">Open full size (MP4, 0.3 MB)</a></figcaption></figure></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FEW STEPS ================= -->
+<section id="steps" aria-labelledby="h-steps">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="h-steps">Flow matching holds up at 1 to 5 Euler steps; diffusion on pouring degrades at 5</h2>
+      <p>Success against the number of network calls per chunk, one seed each. Lift, drawer and stacking are compared at 10 steps; diffusion step sweeps were not run on drawer and stacking, and the diffusion 1-step point on lift is not comparable (below).</p>
+    </div>
+    <div class="panel">
+      <div class="steps-grid">
+        <div><h3 class="h4">Lift <span class="small muted">seed 1001</span></h3><div class="chart" data-chart="steps" data-i="0"></div></div>
+        <div><h3 class="h4">Drawer <span class="small muted">seed 1001, flow only</span></h3><div class="chart" data-chart="steps" data-i="1"></div></div>
+        <div><h3 class="h4">Stacking <span class="small muted">seed 1001, flow, demos only</span></h3><div class="chart" data-chart="steps" data-i="2"></div></div>
+        <div><h3 class="h4">Pouring <span class="small muted">seed 201</span></h3><div class="chart" data-chart="steps" data-i="3"></div></div>
+      </div>
+      <div class="legend"><span><i class="dp"></i>Diffusion</span><span><i class="fm"></i>Flow matching</span><span><i class="nc"></i>not comparable (n/c)</span><span>Steps shown are those measured.</span></div>
+    </div>
+    <div class="cols2" style="margin-top:20px">
+      <div class="prose">
+        <p>Flow matching keeps working with a single Euler step on lift (66.0 %, seed 1001) and drawer (75.5 %); on pouring it is highest at 5 steps (57.0 %), though 50.0 % at 10 steps is within noise. Its pouring success falls as steps are added (41.5 % at 50); no explanation was tested. Diffusion on pouring goes the other way: 27.5 % at 5 steps and 51.5 % at 50. Stacking with flow gives 0.0 % at one step and stays low (10.0 % at 5, 6.0 % at 10).</p>
+        <p>Flow at 5 steps (57.0 %) matches diffusion at 50 steps (51.5 %) within about 1 SE on one seed, with a tenth of the network calls.</p>
+      </div>
+      <div>
+        <div class="callout"><b>Why diffusion at 1 step is not shown as 0.0 %.</b> The code builds the DDIM grid as <code>arange(k-1, -1, -1) * (100 // k)</code>. With k = 1 that is the single time t = 0, so the one network call is made on pure noise treated as a clean chunk and returns about the initial noise. That says nothing about the objective and is not comparable with one Euler step from t = 0 (noise). A grid that starts at t = 99 was not tested.</div>
+        <div class="callout info" style="margin-top:14px"><b>Open caveat for the 27.5 % pour number.</b> The same grid with k = 5 is t = 80, 60, 40, 20, 0: it never sees the noisiest levels (t = 81 to 99). This is an untested possible contributor to diffusion's low 5-step pouring result, not a claimed cause. The grid is from <code>ddim_timesteps</code> in <code>pouring_diffusion/dp_core/model.py</code>.</div>
+        <div class="callout info" style="margin-top:14px"><b>One seed each.</b> These sweeps are single evaluations of single training runs (200 episodes). The diffusion pouring number at 5 steps uses the checkpoint's own 5-step DDIM schedule.</div>
+      </div>
+    </div>
+    <div class="sub">
+      <h3>Flow-matching policies at 5 sampling steps</h3>
+      <p class="prose muted">Four of the recorded episodes per clip, with successes and failures both picked. The rates are the held-out test rates, not the rates of these samples.</p>
+      <div style="margin-top:14px"><div class="grid-clips g2"><figure class="clip"><div class="media" style="aspect-ratio:640/480"><video controls muted playsinline loop preload="none" poster="assets/img/posters/fm_lift_2x2.jpg" width="640" height="480" data-label="Lift flow matching, five sampling steps, four episodes" data-dur="5.0" data-autoplay><source src="assets/video/fm_lift_2x2.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/fm_lift_2x2.mp4">Download it (0.2 MB)</a>.</p></video></div><figcaption><span class="cap-t">Lift</span>Flow, 5 steps, 3 of 4 shown succeed. Held-out 78.2 % (10 steps). <a class="full" href="assets/video/fm_lift_2x2.mp4" aria-label="Open fm lift 2x2 full size (MP4)">Open full size (MP4, 0.2 MB)</a></figcaption></figure><figure class="clip"><div class="media" style="aspect-ratio:848/480"><video controls muted playsinline loop preload="none" poster="assets/img/posters/fm_pour_2x2.jpg" width="848" height="480" data-label="Pour flow matching, five sampling steps, four episodes" data-dur="23.5" data-autoplay><source src="assets/video/fm_pour_2x2.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/fm_pour_2x2.mp4">Download it (0.6 MB)</a>.</p></video></div><figcaption><span class="cap-t">Pour</span>Flow, 5 steps, 3 of 4 shown succeed (envs 0, 1, 3, 5 of 6 recorded). Held-out 57.0 %. <a class="full" href="assets/video/fm_pour_2x2.mp4" aria-label="Open fm pour 2x2 full size (MP4)">Open full size (MP4, 0.6 MB)</a></figcaption></figure></div></div>
+      <p class="small muted prose" style="margin-top:12px">The flow-matching drawer and stacking clips (5 steps, same method) are in the previous section next to the diffusion and teacher clips.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FEATURES ================= -->
+<section id="features" aria-labelledby="h-feat">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="h-feat">What the policy looks at</h2>
+      <p>The image encoder ends in a spatial softmax with 32 keypoints. These visualisations show where the policy looks, with three methods.</p>
+    </div>
+    <div class="cols3">
+      <div class="panel"><h3 class="h4">Attention heatmap and keypoints</h3><p class="small" style="margin:0">The spatial-softmax maps weighted by how strongly the policy reads each keypoint. Cyan dots are the 12 most used keypoints.</p></div>
+      <div class="panel"><h3 class="h4">Occlusion sensitivity</h3><p class="small" style="margin:0">Grey out a 16 &times; 16 px patch of the input and measure how much the executed 8-step action chunk changes (fixed noise). A randomly initialised copy of the network is the sanity baseline.</p></div>
+      <div class="panel"><h3 class="h4">Saliency map</h3><p class="small" style="margin:0">The gradient of the executed 8 actions with respect to the input image (a Jacobian-norm estimate over 12 noise draws).</p></div>
+    </div>
+    <div class="sub"><div class="grid-clips g2"><figure class="clip"><div class="media" style="aspect-ratio:1072/320"><video controls muted playsinline loop preload="none" poster="assets/img/posters/attention_success.jpg" width="1072" height="320" data-label="Attention heatmaps, a successful lift" data-dur="10.0" data-autoplay><source src="assets/video/attention_success.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/attention_success.mp4">Download it (0.5 MB)</a>.</p></video></div><figcaption><span class="cap-t">Success: attention locks onto the cube</span>One lift episode of the earlier lift policy on an unseen seed (not the dp_lift / fm_lift pair). Left to right: scene, workspace camera, wrist camera, with the spatial-softmax heatmap and the top-12 keypoints (cyan). The clock is the episode time. <a class="full" href="assets/video/attention_success.mp4" aria-label="Open attention success full size (MP4)">Open full size (MP4, 0.5 MB)</a></figcaption></figure><figure class="clip"><div class="media" style="aspect-ratio:1072/320"><video controls muted playsinline loop preload="none" poster="assets/img/posters/attention_failure.jpg" width="1072" height="320" data-label="Attention heatmaps, a failed lift" data-dur="10.0" data-autoplay><source src="assets/video/attention_failure.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/attention_failure.mp4">Download it (1.3 MB)</a>.</p></video></div><figcaption><span class="cap-t">Failure: attention on the empty table</span>An episode of the same policy that never lifts the cube. The video's own overlay reads: attention on the empty table, not the cube. <a class="full" href="assets/video/attention_failure.mp4" aria-label="Open attention failure full size (MP4)">Open full size (MP4, 1.3 MB)</a></figcaption></figure></div></div>
+    <div class="sub">
+      <h3>Occlusion and saliency</h3>
+      <p class="prose muted">Computed on held-out demonstrations with the study's best earlier lift diffusion policy (<code>runs/dp_wrist_more</code>), not the <code>dp_lift</code> / <code>fm_lift</code> pair compared above. These maps were not re-run for the new from-scratch diffusion and flow-matching policies.</p>
+      <div style="margin-top:14px"><div class="stills s1"><figure class="still"><img src="assets/img/features/occlusion_approach.png" alt="Occlusion sensitivity at the approach: the policy input, the trained policy's map and a random-initialised baseline's map, workspace and wrist views" width="1552" height="256" style="max-width:1552px" loading="lazy" decoding="async"><figcaption><span class="cap-t">Approach, 0.5 s</span>Left to right: policy input (workspace | wrist), trained policy, random-initialised baseline. The trained map peaks on the gripper and the cube, the baseline on the arm and the background.</figcaption></figure><figure class="still"><img src="assets/img/features/occlusion_grasp.png" alt="Occlusion sensitivity at the grasp, same three panels" width="1552" height="256" style="max-width:1552px" loading="lazy" decoding="async"><figcaption><span class="cap-t">Grasp, 1.4 s</span>Same three panels.</figcaption></figure><figure class="still"><img src="assets/img/features/occlusion_lift.png" alt="Occlusion sensitivity while lifting, same three panels" width="1552" height="256" style="max-width:1552px" loading="lazy" decoding="async"><figcaption><span class="cap-t">Lift, 2.8 s</span>Same three panels.</figcaption></figure><figure class="still"><img src="assets/img/features/saliency_approach.png" alt="Saliency map at the approach: policy input and saliency map" width="1032" height="256" style="max-width:1032px" loading="lazy" decoding="async"><figcaption><span class="cap-t">Saliency, approach</span>Saliency: the input and the map.</figcaption></figure><figure class="still"><img src="assets/img/features/saliency_grasp.png" alt="Saliency map at the grasp: policy input and saliency map" width="1032" height="256" style="max-width:1032px" loading="lazy" decoding="async"><figcaption><span class="cap-t">Saliency, grasp</span>Same two panels.</figcaption></figure><figure class="still"><img src="assets/img/features/saliency_lift.png" alt="Saliency map while lifting: policy input and saliency map" width="1032" height="256" style="max-width:1032px" loading="lazy" decoding="async"><figcaption><span class="cap-t">Saliency, lift</span>Same two panels.</figcaption></figure></div></div>
+    </div>
+    <div class="sub">
+      <h3>Attention across tasks and objectives</h3>
+      <p class="prose muted">Same spatial-softmax method, cyan = top-12 keypoints. The two lift stills come from different random scene draws, so they are illustrations and not a paired test. No saliency or occlusion maps were computed for these policies.</p>
+      <div style="margin-top:14px"><div class="stills s3"><figure class="still"><img src="assets/img/features/feat_p2_drawer_dp.png" alt="Drawer, diffusion policy, approaching the handle: scene, workspace and wrist attention heatmaps" width="800" height="240" style="max-width:800px" loading="lazy" decoding="async"><figcaption><span class="cap-t">Drawer, diffusion, approach (2.0 s)</span>The wrist camera locks on the handle.</figcaption></figure><figure class="still"><img src="assets/img/features/feat_p3_drawer_fm.png" alt="Drawer, flow matching, approaching the handle: scene, workspace and wrist attention heatmaps" width="800" height="240" style="max-width:800px" loading="lazy" decoding="async"><figcaption><span class="cap-t">Drawer, flow matching, approach (2.0 s)</span>Same method on the flow-matching policy.</figcaption></figure><figure class="still"><img src="assets/img/features/feat_p3_lift_dp.png" alt="Lift, diffusion policy, holding the cube: scene, workspace and wrist attention heatmaps" width="800" height="240" style="max-width:800px" loading="lazy" decoding="async"><figcaption><span class="cap-t">Lift, diffusion, holding the cube (3.2 s)</span>Both lift policies attend to the cube in the wrist view once it is held.</figcaption></figure><figure class="still"><img src="assets/img/features/feat_p3_lift_fm.png" alt="Lift, flow matching, holding the cube: scene, workspace and wrist attention heatmaps" width="800" height="240" style="max-width:800px" loading="lazy" decoding="async"><figcaption><span class="cap-t">Lift, flow matching, holding the cube (3.2 s)</span>The scene is a different random draw from the diffusion still: an illustration, not a paired test.</figcaption></figure><figure class="still"><img src="assets/img/features/feat_p2_stack_grasp.png" alt="Stacking, grasp: scene, workspace and wrist attention heatmaps" width="800" height="240" style="max-width:800px" loading="lazy" decoding="async"><figcaption><span class="cap-t">Stack, grasp (4.0 s)</span>The wrist camera sees the cube between the fingers.</figcaption></figure><figure class="still"><img src="assets/img/features/feat_p2_stack_fail.png" alt="Stacking, failure: attention heatmaps while the policy stalls holding cube 3 beside the stack" width="800" height="240" style="max-width:800px" loading="lazy" decoding="async"><figcaption><span class="cap-t">Stack, failure (11.5 s)</span>The policy stalls holding cube 3 beside the stack.</figcaption></figure></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= LIMITS ================= -->
+<section id="limits" aria-labelledby="h-limits">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="h-limits">Failures and limits</h2>
+      <p>What was not tested, what was corrected, and what the clips do not show.</p>
+    </div>
+    <div class="cols2">
+      <div class="panel warn">
+        <h3 class="h4">Where the policies fail</h3>
+        <ul class="bullets small">
+          <li><b>Stacking.</b> With demonstrations only, diffusion stacked no cube pair at all in 491 of 800 episodes and flow matching in 540 of 800.</li>
+          <li><b>Attention failure.</b> In an episode that never lifts the cube, the attention heatmap sits on the empty table, not the cube (clip in the previous section, earlier lift policy).</li>
+          <li><b>From-scratch DAgger.</b> Retraining on all DAgger data gives about 2 % for both objectives; the cause was not verified.</li>
+          <li><b>Pouring and steps.</b> Flow-matching pouring falls from 57.0 % at 5 steps to 41.5 % at 50; no explanation was tested.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3 class="h4">What the numbers can and cannot say</h3>
+        <ul class="bullets small">
+          <li>Flow against diffusion rows come from <b>different training runs, one seed each</b>. Differences of a few points on stacking and drawer are not meaningful. The lift (+15) and pouring-at-5-steps (+29.5) gaps are far outside the standard errors, but still single training runs.</li>
+          <li>Round 2 of DAgger was <b>chosen on seed 1001</b> (39.0 %); the reported 42.1 % uses seeds 1002-1005 only.</li>
+          <li>DAgger was run with the diffusion student only. Flow matching was tested on demos and on the from-scratch DAgger mix, not as a DAgger chain.</li>
+          <li>Diffusion demos-only stacking is 10.2 % on seeds 1001-1003 and 10.9 % on seeds 1002-1005; per-seed values differ by up to 0.5 points between runs, so the numbers reproduce only to about that level.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3 class="h4">Corrections and incidents</h3>
+        <ul class="bullets small">
+          <li>The flow-matching stacking number first reported as 6.3 % was an averaging error: the three seeds (12/200, 20/200, 12/200) pool to 44/600 = <b>7.3 %</b>.</li>
+          <li>A first test of DAgger round 2 on seed 1003 gave 6 %. It ran beside flow-matching training on an almost full GPU, and other tests at the same time hit out-of-memory errors. An idle-GPU rerun gave 42.7 % (192 episodes) and then 43.5 % (200 episodes). How GPU contention produced the low number is not known; the policy itself is fine.</li>
+          <li>The first version of the sampling overlays drew the <b>commanded</b> joint targets. The joint controller settles up to 0.27 rad away from them (about 140 px at the gripper), so the converged lines sat far from the real gripper. Those clips were replaced; the lines now come from the simulator itself.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3 class="h4">What the clips do not show</h3>
+        <ul class="bullets small">
+          <li>The shown attempts are successes chosen on purpose. Stacking with flow matching needed 32 environments to give two, and there was no environment where both models succeeded.</li>
+          <li>Pour has no water: success is a pour-stage and placement test (<code>subgoal &ge; 9</code>), not a measurement of liquid.</li>
+          <li>No multimodal task was recorded: the 32 final pouring samples agree within about 2 mm (unimodal at this call: n = 32, one env), so the clips say nothing about how the two methods handle multimodal data.</li>
+          <li>All results are in simulation (Isaac Lab, Isaac Sim 5.1).</li>
+        </ul>
+      </div>
+    </div>
+    <div class="sub">
+      <h3>Failure and recovery in the earlier lift study</h3>
+      <p class="prose muted">From page 1 of the report (an earlier lift policy, before the from-scratch diffusion and flow-matching pair). These clips and numbers are not covered by RESULTS.md; they are copied from <code>report/index.html</code>.</p>
+      <div style="margin-top:14px"><div class="grid-clips g2"><figure class="clip"><div class="media" style="aspect-ratio:1280/320"><video controls muted playsinline loop preload="none" poster="assets/img/posters/franka_before_failures.jpg" width="1280" height="320" data-label="Earlier lift policy before recovery demonstrations, failing episodes" data-dur="8.0" data-autoplay><source src="assets/video/franka_before_failures.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/franka_before_failures.mp4">Download it (0.4 MB)</a>.</p></video></div><figcaption><span class="cap-t">Before: no recovery demonstrations</span>The policy misses the cube and never re-grasps. Success 59.8 %. <a class="full" href="assets/video/franka_before_failures.mp4" aria-label="Open franka before failures full size (MP4)">Open full size (MP4, 0.4 MB)</a></figcaption></figure><figure class="clip"><div class="media" style="aspect-ratio:1280/320"><video controls muted playsinline loop preload="none" poster="assets/img/posters/franka_recovery_successes.jpg" width="1280" height="320" data-label="Earlier lift policy with recovery demonstrations, recovering from injected failures" data-dur="8.0" data-autoplay><source src="assets/video/franka_recovery_successes.mp4" type="video/mp4"><p>Your browser cannot play this video. <a href="assets/video/franka_recovery_successes.mp4">Download it (0.3 MB)</a>.</p></video></div><figcaption><span class="cap-t">After: recovery demonstrations</span>Cube dropped, then re-grasped; cube knocked, then re-approached (injected failures). Re-grasp after a drop: 12 to 38 %; 100 episodes each. <a class="full" href="assets/video/franka_recovery_successes.mp4" aria-label="Open franka recovery successes full size (MP4)">Open full size (MP4, 0.3 MB)</a></figcaption></figure></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= REPRODUCE ================= -->
+<section id="reproduce" aria-labelledby="h-repro">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="h-repro">Reproduce and download</h2>
+      <p>The repository holds the code and the report. It does not hold training runs, checkpoints or demonstration data (about 170 GB); the scripts regenerate them. They need Isaac Lab (conda env <code>isaaclab</code>) and run from the repository root.</p>
+    </div>
+    <div class="cols2" style="align-items:start">
+      <div>
+<pre><code># train a flow-matching student on stacking demos
+python train_dp.py --objective flow --dataset runs/stack/demos_clean \
+  --steps 30000 --bf16 --output runs/flow/fm_stack
+
+# evaluate it with 5 sampling steps
+python eval_task.py --task stack --checkpoint runs/flow/fm_stack/bc_best.pt \
+  --episodes 200 --seed 1001 --inference-steps 5</code></pre>
+        <p class="small muted" style="margin-top:10px">Commands as in the repository README, which lists every script and the pipelines (<code>run_flow.sh</code>, <code>run_stack_dagger.sh</code>, <code>run_improve.sh</code>). The scripts expect the original workspace paths.</p>
+      </div>
+      <div class="panel">
+        <h3 class="h4">Links and files</h3>
+        <ul class="bullets">
+          <li><a href="https://github.com/ismael-esp/franka-diffusion-flow-matching#readme">README on GitHub</a>: layout, commands, results table.</li>
+          <li><a href="https://github.com/ismael-esp/franka-diffusion-flow-matching/blob/main/report/RESULTS.md">report/RESULTS.md</a>: every table and caveat this page is drawn from.</li>
+          <li><a href="assets/video/results.mp4">The results video</a> (MP4, 8.3 MB), as on this page.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <p>Diffusion and flow-matching policies on four simulated manipulation tasks, Isaac Lab and Isaac Sim 5.1. <a href="https://github.com/ismael-esp/franka-diffusion-flow-matching">github.com/ismael-esp/franka-diffusion-flow-matching</a> &middot; <a href="#top">Back to top</a></p>
+    <details>
+      <summary>Where the numbers come from</summary>
+      <p>Success rates, seeds, checkpoints and chunk statistics are copied from <code>report/RESULTS.md</code> and <code>report/media/README_task_videos.md</code>. The error whiskers are computed with the formula in RESULTS.md; printed &plusmn; values are RESULTS.md's own. Some descriptive details come from the report pages or the code (0.30 m drawer target, &ldquo;3 of 4 shown&rdquo; clip captions, the earlier lift study, occlusion and saliency settings, the DDIM grid, the training commands). Video lengths and file sizes were measured from the files.</p>
+    </details>
+    <p>Static page, no build step, no analytics, cookies or third-party requests. Fonts: Archivo and IBM Plex Sans (latin subsets, SIL Open Font License 1.1, licence texts: <a href="assets/fonts/OFL-Archivo.txt">Archivo</a>, <a href="assets/fonts/OFL-IBM-Plex-Sans.txt">IBM Plex Sans</a>), self-hosted.</p>
+  </div>
+</footer>
+
+<script src="assets/js/charts.js" defer></script>
+<script src="assets/js/site.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# Python packages the code in this repository imports, besides Isaac Sim / Isaac Lab (installed separately, see README section 1).
+# Versions are those of the conda env `isaaclab` the results were produced in (pip list, 2026-11); they were not re-installed
+# from this file. For offline plotting only (README section 7) numpy, matplotlib and pillow are enough.
+torch==2.7.0
+torchvision==0.22.0
+numpy==1.26.0
+pillow==11.3.0
+matplotlib==3.10.3
+imageio==2.37.0
+imageio-ffmpeg==0.8.0
+gymnasium==1.2.1
+rsl-rl-lib==3.1.2          # PPO teachers (train_teacher_*.py); installed by `./isaaclab.sh --install rsl_rl`
+# optional: python-pptx (report/build_pptx.py, report/build_onepager.py), cairosvg (report/tools/make_pngs.py)

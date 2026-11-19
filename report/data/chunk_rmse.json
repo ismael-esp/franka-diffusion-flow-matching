@@ -1,0 +1,6 @@
+{
+ "teacher_forced_chunk_rmse_rad_mean": 0.04634315156541219,
+ "p90": 0.15664987977431474,
+ "n_chunks": 300,
+ "episodes": 20
+}

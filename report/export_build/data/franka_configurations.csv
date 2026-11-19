@@ -1,0 +1,8 @@
+configuration,success_pct,se_pct,kind
+Teacher · privileged (PPO),96.0,1.39,teacher
+DP · workspace cam,42.0,2.47,dp
+DP · + wrist cam,56.3,2.48,dp
+DP · + recovery demos,72.5,2.23,dp
+DP · + zoom cam · test,75.2,1.37,dp
+DP · + robust DAgger · test,76.4,1.34,dp
+DAgger · PPO teacher,48.0,2.5,neg
